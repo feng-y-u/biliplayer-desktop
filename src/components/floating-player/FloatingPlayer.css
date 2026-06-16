@@ -1,6 +1,23 @@
 .float-player {
   position: fixed;
   z-index: 100;
+  background: transparent;
+}
+
+/* Expanded mode: top bar is the drag handle */
+.float-player .expanded-panel .ep-top-bar {
+  -webkit-app-region: drag;
+}
+
+.float-player .expanded-panel [data-no-drag],
+.float-player .expanded-panel [data-no-drag] * {
+  -webkit-app-region: no-drag;
+}
+
+/* Prevent browser's native image drag */
+.float-player img {
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .player-thumb {

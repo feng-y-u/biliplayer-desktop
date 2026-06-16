@@ -4,6 +4,9 @@ declare global {
       api: (message: any) => Promise<any>;
       storeGet: (key: string) => Promise<any>;
       storeSet: (key: string, value: any) => Promise<void>;
+      windowMove: (x: number, y: number) => Promise<void>;
+      windowResize: (w: number, h: number) => Promise<void>;
+      windowGetPosition: () => Promise<{ x: number; y: number; width: number; height: number }>;
     };
   }
 }
@@ -84,6 +87,25 @@ export function setVolumeLocal(volume: number) { if (audioEl) audioEl.volume = v
 
 export function getAudioElement(): HTMLAudioElement | null {
   return audioEl;
+}
+
+/** Preload audio URL into the global player cache without playing */
+export async function loadAudioTrack(bvid: string, cid: number): Promise<{ url: string; expiresAt: number } | null> {
+  try {
+    const info = await getVideoInfo(bvid);
+    if (info.success && info.data?.cid) cid = info.data.cid;
+    const res = await getAudioUrl(bvid, cid);
+    if (!res.success) return null;
+    const audio = ensureAudio();
+    audio.src = res.data.url;
+    currentUrl = res.data.url;
+    currentExpiresAt = res.data.expiresAt;
+    currentBvid = bvid;
+    currentCid = cid;
+    return { url: res.data.url, expiresAt: res.data.expiresAt };
+  } catch {
+    return null;
+  }
 }
 
 export function getLocalPlayerState() {

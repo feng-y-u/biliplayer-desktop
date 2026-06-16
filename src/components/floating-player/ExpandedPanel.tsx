@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import './ExpandedPanel.css';
 import Playlist from './Playlist';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
@@ -52,9 +52,12 @@ export default function ExpandedPanel({
   onInputSubmit,
   onCreateFavorite,
   onAddTrackToFavorite,
+  volume,
+  onVolumeChange,
 }: ExpandedPanelProps) {
   const [inputValue, setInputValue] = useState('');
   const [activeTab, setActiveTab] = useState<'playlist' | 'favs' | 'recent'>('playlist');
+  const prevVolume = useRef(0.7);
 
   const formatTime = (s: number) => {
     if (!s || !isFinite(s)) return '0:00';
@@ -98,10 +101,10 @@ export default function ExpandedPanel({
   }, [inputValue, onInputSubmit]);
 
   return (
-    <div className="expanded-panel open" data-no-drag>
+    <div className="expanded-panel open">
       <div className="ep-top-bar">
         <h3>Piliplayer</h3>
-        <div className="ep-top-btns">
+        <div className="ep-top-btns" data-no-drag>
           <button className="ep-top-btn" onClick={onClose} title="收起">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -132,30 +135,53 @@ export default function ExpandedPanel({
         </div>
       )}
 
-      <div className="ep-controls">
-        <button className="ep-ctrl-btn" onClick={() => onPlayModeChange(nextMode(playMode))} title={modeTitle(playMode)}>
+      <div className="ep-controls" data-no-drag>
+        <button className="ep-mode-btn" onClick={() => onPlayModeChange(nextMode(playMode))} title={modeTitle(playMode)}>
           <ModeIcon mode={playMode} />
         </button>
-        <button className="ep-ctrl-btn" onClick={onPrev} title="上一首">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
-        </button>
-        <button className="ep-play-btn" onClick={onPlayPause} title="播放/暂停">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            {isPlaying
-              ? <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
-              : <path d="M8 5v14l11-7z" />
-            }
+
+        <div className="ep-ctrl-center">
+          <button className="ep-ctrl-btn" onClick={onPrev} title="上一首">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
+          </button>
+          <button className="ep-play-btn" onClick={onPlayPause} title="播放/暂停">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              {isPlaying
+                ? <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
+                : <path d="M8 5v14l11-7z" />
+              }
+            </svg>
+          </button>
+          <button className="ep-ctrl-btn" onClick={onNext} title="下一首">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+          </button>
+        </div>
+
+        <button className="ep-vol-btn" onClick={() => {
+          if (volume > 0) { prevVolume.current = volume; onVolumeChange(0); }
+          else onVolumeChange(prevVolume.current);
+        }} title={volume > 0 ? '静音' : '恢复音量'}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {volume > 0 ? (
+              <>
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              </>
+            ) : (
+              <>
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <line x1="23" y1="9" x2="17" y2="15" />
+                <line x1="17" y1="9" x2="23" y2="15" />
+              </>
+            )}
           </svg>
         </button>
-        <button className="ep-ctrl-btn" onClick={onNext} title="下一首">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
-        </button>
-        <button className="ep-ctrl-btn" onClick={() => onPlayModeChange(nextMode(playMode))} title={modeTitle(playMode)}>
-          <ModeIcon mode={playMode} />
-        </button>
+        <input className="ep-vol-slider" type="range" min={0} max={1} step={0.01} value={volume}
+          onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+        />
       </div>
 
-      <div className="ep-progress">
+      <div className="ep-progress" data-no-drag>
         <div className="ep-prog-bar">
           <div className="ep-prog-fill" style={{ width: `${progValue}%` }} />
           <input type="range" min={0} max={100} step={0.1} value={progValue}
@@ -168,7 +194,7 @@ export default function ExpandedPanel({
         </div>
       </div>
 
-      <div className="ep-input-row">
+      <div className="ep-input-row" data-no-drag>
         <input type="text" placeholder="BV 号或收藏夹链接" value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
@@ -176,7 +202,7 @@ export default function ExpandedPanel({
         <button onClick={handleSubmit}>添加</button>
       </div>
 
-      <div className="ep-tabs">
+      <div className="ep-tabs" data-no-drag>
         <button className={`ep-tab ${activeTab === 'playlist' ? 'active' : ''}`} onClick={() => setActiveTab('playlist')}>
           播放列表 ({tracks.length})
         </button>
@@ -188,7 +214,7 @@ export default function ExpandedPanel({
         </button>
       </div>
 
-      <div className="ep-content">
+      <div className="ep-content" data-no-drag>
         {activeTab === 'playlist' && (
           <>
             {currentAudio && (

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { usePlayerStore } from './hooks/usePlayerStore';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 import FloatingPlayer from '@/components/floating-player/FloatingPlayer';
@@ -30,9 +30,28 @@ function App() {
     }
   });
 
+  const handlePlayPause = useCallback(() => {
+    if (!playerState.currentAudio && store.tracks[store.currentIndex]) {
+      playTrack(store.tracks[store.currentIndex]!);
+    } else {
+      playPause();
+    }
+  }, [playerState.currentAudio, store.tracks, store.currentIndex, playTrack, playPause]);
+
   useEffect(() => {
     syncVolume(store.volume);
   }, [store.volume, syncVolume]);
+
+  // Preload current track audio URL on mount (no autoplay)
+  const autoLoaded = useRef(false);
+  useEffect(() => {
+    if (!autoLoaded.current && store.tracks.length > 0 && store.tracks[store.currentIndex]) {
+      autoLoaded.current = true;
+      const track = store.tracks[store.currentIndex]!;
+      // Preload audio URL into player cache
+      import('./services/api').then(m => m.loadAudioTrack(track.bvid, track.cid));
+    }
+  }, [store.tracks, store.currentIndex]);
 
   const handlePlayTrack = async (index: number) => {
     if (index < 0 || index >= store.tracks.length) return;
@@ -91,7 +110,7 @@ function App() {
       }}
       playerState={{ ...playerState, currentAudio: store.tracks[store.currentIndex] || null }}
       playlistState={{ tracks: store.tracks, currentIndex: store.currentIndex, playMode: store.playMode }}
-      onPlayPause={playPause}
+      onPlayPause={handlePlayPause}
       onPlayTrack={handlePlayTrack}
       onPrev={handlePrevButton}
       onNext={handleNextButton}

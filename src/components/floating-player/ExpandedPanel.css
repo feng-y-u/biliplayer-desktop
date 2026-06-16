@@ -1,25 +1,19 @@
 .expanded-panel {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.95);
   width: 320px;
   height: 480px;
   background: var(--surface);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  z-index: 200;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 .expanded-panel.open {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, -50%) scale(1);
 }
 
 .ep-top-bar {
@@ -107,13 +101,106 @@
   color: var(--muted);
 }
 
+/* ── Controls row ── */
 .ep-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 12px;
+  flex-shrink: 0;
+}
+
+/* Volume: icon + inline slider */
+.ep-vol-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--fg-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+.ep-vol-btn:hover {
+  color: var(--accent);
+  background: var(--surface-hover);
+}
+.ep-vol-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.ep-vol-slider {
+  width: 60px;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ep-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* Transport controls centered */
+.ep-ctrl-center {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 16px;
-  padding: 8px 16px 12px;
+  flex: 1;
+}
+
+/* Play mode button right */
+.ep-mode-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--fg-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+.ep-mode-btn:hover {
+  color: var(--accent);
+  background: var(--surface-hover);
+}
+.ep-mode-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* remove orphaned rules from old vol-track */
+.ep-vol-track,
+.ep-vol-bg,
+.ep-vol-pct,
+.ep-vol-track input[type="range"] {
+  display: none;
+}
+
+/* Control buttons — truly centered via flex */
+.ep-ctrl-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex: 1;
 }
 .ep-ctrl-btn {
   width: 36px;

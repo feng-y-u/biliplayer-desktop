@@ -46,7 +46,9 @@ function createWindow() {
     y: winY,
     alwaysOnTop: true,
     frame: false,
-    backgroundColor: '#f8f9fc',
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
     resizable: true,
     skipTaskbar: false,
     show: false,
@@ -189,3 +191,24 @@ ipcMain.handle('api', async (_event, message: { type: string; [key: string]: any
 
 ipcMain.handle('store:get', (_event, key: string) => store.get(key as any));
 ipcMain.handle('store:set', (_event, key: string, value: any) => store.set(key as any, value));
+
+// ── Window control IPC ──
+
+ipcMain.on('window:move', (_event, x: number, y: number) => {
+  if (mainWindow) mainWindow.setPosition(Math.round(x), Math.round(y));
+});
+
+ipcMain.handle('window:resize', (_event, width: number, height: number) => {
+  if (mainWindow) mainWindow.setSize(Math.round(width), Math.round(height));
+});
+
+ipcMain.handle('window:getPosition', () => {
+  if (!mainWindow) return { x: 0, y: 0, width: 320, height: 480 };
+  const [x, y] = mainWindow.getPosition();
+  const [width, height] = mainWindow.getSize();
+  return { x, y, width, height };
+});
+
+ipcMain.handle('window:setMinimumSize', (_event, w: number, h: number) => {
+  if (mainWindow) mainWindow.setMinimumSize(Math.round(w), Math.round(h));
+});

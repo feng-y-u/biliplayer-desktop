@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import ExpandedPanel from './ExpandedPanel';
-import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
 import './FloatingPlayer.css';
 import type { CollapsedState, PlayerState, PlaylistState, PlayMode, WindowPosition, Track, FavoriteFolder } from '@/types';
 
-const DRAG_THRESHOLD = 5;
+const WIN_W = 320;
+const WIN_H = 480;
 
 interface FloatingPlayerProps {
   storage: {
@@ -57,71 +57,62 @@ export default function FloatingPlayer({
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const [hovered, setHovered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef({
-    active: false,
-    dragging: false,
-    startX: 0,
-    startY: 0,
-    offsetX: 0,
-    offsetY: 0,
-  });
-
-  const wp = storage.windowPosition;
-  const wpRef = useRef(wp);
-  wpRef.current = wp;
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    if (wp.left === 0 && wp.top === 0) {
-      const defaultLeft = window.innerWidth - 80;
-      const defaultTop = (window.innerHeight - 56) / 2;
-      containerRef.current.style.left = `${defaultLeft}px`;
-      containerRef.current.style.top = `${defaultTop}px`;
-      storage.setWindowPosition({ ...wp, left: defaultLeft, top: defaultTop });
-    } else {
-      containerRef.current.style.left = `${wp.left}px`;
-      containerRef.current.style.top = `${wp.top}px`;
-    }
-  }, []);
-
   const didDrag = useRef(false);
+  const dragSession = useRef<{
+    startScreenX: number;
+    startScreenY: number;
+    startWinX: number;
+    startWinY: number;
+    dragging: boolean;
+  } | null>(null);
+
+  // Set window size and restore position on mount
+  useEffect(() => {
+    (async () => {
+      const api = window.electronAPI;
+      await api.windowResize(WIN_W, WIN_H);
+      const pos = await api.windowGetPosition();
+      const wp = storage.windowPosition;
+      if (wp.left !== 0 || wp.top !== 0) {
+        api.windowMove(wp.left, wp.top);
+      } else {
+        storage.setWindowPosition({ left: pos.x, top: pos.y });
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
-      const ds = dragState.current;
-      if (!ds.active) return;
-      const dx = e.clientX - ds.startX;
-      const dy = e.clientY - ds.startY;
-      if (!ds.dragging) {
-        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
-          ds.dragging = true;
-          didDrag.current = true;
-          document.body.style.cursor = 'grabbing';
-          document.body.style.userSelect = 'none';
-        }
-        return;
+      const s = dragSession.current;
+      if (!s) return;
+
+      const dx = e.screenX - s.startScreenX;
+      const dy = e.screenY - s.startScreenY;
+
+      if (!s.dragging) {
+        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+        s.dragging = true;
+        didDrag.current = true;
+        document.body.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
       }
-      if (!containerRef.current) return;
-      containerRef.current.style.left = `${e.clientX - ds.offsetX}px`;
-      containerRef.current.style.top = `${e.clientY - ds.offsetY}px`;
+
+      window.electronAPI.windowMove(s.startWinX + dx, s.startWinY + dy);
     }
 
     function onMouseUp() {
-      const ds = dragState.current;
-      if (!ds.active) return;
-      if (ds.dragging && containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const finalX = window.innerWidth - rect.width;
-        const curTop = parseFloat(containerRef.current.style.top);
-        const finalY = Math.max(0, Math.min(curTop, window.innerHeight - rect.height));
-        containerRef.current.style.left = `${finalX}px`;
-        containerRef.current.style.top = `${finalY}px`;
-        storage.setWindowPosition({ ...wpRef.current, left: finalX, top: finalY });
-      }
-      ds.active = false;
-      ds.dragging = false;
+      const s = dragSession.current;
+      if (!s) return;
+      dragSession.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+
+      if (s.dragging) {
+        (async () => {
+          const pos = await window.electronAPI.windowGetPosition();
+          storage.setWindowPosition({ left: pos.x, top: pos.y });
+        })();
+      }
     }
 
     window.addEventListener('mousemove', onMouseMove);
@@ -132,21 +123,17 @@ export default function FloatingPlayer({
     };
   }, []);
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).closest('[data-no-drag]')) return;
-      e.preventDefault();
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      dragState.current.active = true;
-      dragState.current.dragging = false;
-      dragState.current.startX = e.clientX;
-      dragState.current.startY = e.clientY;
-      dragState.current.offsetX = e.clientX - rect.left;
-      dragState.current.offsetY = e.clientY - rect.top;
-    },
-    [],
-  );
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (collapsedState === 'expanded') return;
+    dragSession.current = {
+      startScreenX: e.screenX,
+      startScreenY: e.screenY,
+      startWinX: window.screenX,
+      startWinY: window.screenY,
+      dragging: false,
+    };
+    didDrag.current = false;
+  }, [collapsedState]);
 
   const handleThumbClick = useCallback(() => {
     if (didDrag.current) {
@@ -161,6 +148,7 @@ export default function FloatingPlayer({
     setHovered(false);
   }, []);
 
+  // Click outside to collapse
   useEffect(() => {
     if (collapsedState !== 'expanded') return;
     const handleDocClick = (e: MouseEvent) => {
@@ -205,8 +193,8 @@ export default function FloatingPlayer({
               <button data-no-drag onClick={onNext} title="下一首">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
               </button>
-              <button data-no-drag onClick={() => onPlayModeChange(nextMode(playlistState.playMode))} title={modeTitle(playlistState.playMode)}>
-                <ModeIcon mode={playlistState.playMode} />
+              <button data-no-drag onClick={() => onPlayModeChange(playlistState.playMode === 'loop' ? 'shuffle' : playlistState.playMode === 'shuffle' ? 'single' : 'loop')} title="播放模式">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 17H7v-2h10v2zm-5-8H7v2h5V9zm12 3c0 5.5-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2s10 4.5 10 10z"/></svg>
               </button>
             </div>
           )}
