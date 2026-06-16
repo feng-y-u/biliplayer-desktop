@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-electron/
+*.local
+.env
+.env.*
+
+# Debug logs
+debug*.txt
+lastrun.log
+procs_*.txt

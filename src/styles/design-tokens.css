@@ -1,0 +1,92 @@
+/* ===================================================================
+   Piliplayer · Flat Design System Tokens
+   Source: temp/player.html + temp/index.html
+   =================================================================== */
+
+:root {
+  /* ── Colors ─────────────────────────────────────────────── */
+  /* Background */
+  --bg: #f5f8ff;
+  --surface: #ffffff;
+  --surface-warm: #eaf1ff;
+
+  /* Foreground / Text */
+  --fg: #101828;
+  --fg-2: #344054;
+  --muted: #667085;
+  --meta: #2563eb;
+
+  /* Borders */
+  --border: #d7e0ef;
+  --border-soft: #edf2f8;
+
+  /* Accent */
+  --accent: #2563eb;
+  --accent-on: #ffffff;
+  --accent-hover: color-mix(in oklab, var(--accent), black 8%);
+  --accent-active: color-mix(in oklab, var(--accent), black 14%);
+
+  /* Semantic */
+  --success: #16a34a;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+
+  /* ── Typography ─────────────────────────────────────────── */
+  --font-body: Inter, system-ui, sans-serif;
+  --font-display: Inter, system-ui, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, monospace;
+
+  /* Sizes (player.html variants) */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 30px;
+
+  /* Popup HTML variant (slightly larger) */
+  --text-xs-popup: 12px;
+  --text-sm-popup: 14px;
+  --text-base-popup: 16px;
+  --text-lg-popup: 20px;
+  --text-xl-popup: 26px;
+
+  /* ── Spacing ────────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* ── Radius ─────────────────────────────────────────────── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+
+  /* Popup HTML variant */
+  --radius-sm-popup: 10px;
+  --radius-md-popup: 14px;
+  --radius-lg-popup: 20px;
+
+  /* ── Elevation ──────────────────────────────────────────── */
+  --elev-flat: none;
+  --elev-ring: 0 0 0 1px var(--border);
+  --elev-raised: 0 12px 40px rgba(16, 24, 40, 0.14);
+  --elev-raised-popup: 0 8px 28px rgba(16, 24, 40, 0.12);
+  --elev-overlay: 0 24px 80px rgba(16, 24, 40, 0.18);
+  --focus-ring: 0 0 0 4px rgba(37, 99, 235, 0.22);
+
+  /* ── Motion ─────────────────────────────────────────────── */
+  --motion-fast: 150ms;
+  --motion-base: 240ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  --thumb-size: 48px;
+  --panel-width: 360px;
+}
