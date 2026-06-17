@@ -168,6 +168,7 @@ function App() {
       onMoveTrackUp={store.moveTrackUp}
       onPlayModeChange={store.setPlayMode}
       onInputSubmit={handleInputSubmit}
+      loading={store.loading}
       onCreateFavorite={handleCreateFavorite}
       onToggleFavorite={handleToggleFavorite}
       onPlayFromFavorite={handlePlayFromFavorite}

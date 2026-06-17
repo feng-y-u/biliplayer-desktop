@@ -31,8 +31,10 @@ interface ExpandedPanelProps {
   onPlayModeChange: (mode: PlayMode) => void;
   onClose: () => void;
   onInputSubmit: (input: string) => void;
+  loading: boolean;
   onCreateFavorite: (name: string) => void;
-  onAddTrackToFavorite: (favId: string, track: Track) => void;
+  onToggleFavorite: (track: Track) => void;
+  onPlayFromFavorite: (track: Track) => void;
 }
 
 export default function ExpandedPanel({
@@ -55,8 +57,10 @@ export default function ExpandedPanel({
   onPlayModeChange,
   onClose,
   onInputSubmit,
+  loading,
   onCreateFavorite,
-  onAddTrackToFavorite,
+  onToggleFavorite,
+  onPlayFromFavorite,
   volume,
   onVolumeChange,
 }: ExpandedPanelProps) {
@@ -77,30 +81,6 @@ export default function ExpandedPanel({
   };
 
   const progValue = duration ? (currentTime / duration) * 100 : 0;
-
-  const handleCreateFav = useCallback(() => {
-    const name = prompt('收藏夹名称：');
-    if (name?.trim()) onCreateFavorite(name.trim());
-  }, [onCreateFavorite]);
-
-  const handleAddToFav = useCallback(() => {
-    if (!currentAudio) return;
-    if (favorites.length === 0) {
-      handleCreateFav();
-      return;
-    }
-    const names = favorites.map((f, i) => `${i + 1}. ${f.name}`).join('\n');
-    const choice = prompt(`选择收藏夹添加当前歌曲：\n${names}\n\n输入编号：`);
-    if (choice) {
-      const idx = parseInt(choice) - 1;
-      if (idx >= 0 && idx < favorites.length) {
-        onAddTrackToFavorite(favorites[idx]!.id, {
-          bvid: currentAudio.bvid, cid: currentAudio.cid,
-          title: currentAudio.title, author: currentAudio.author, cover: currentAudio.cover,
-        });
-      }
-    }
-  }, [currentAudio, favorites, onAddTrackToFavorite, handleCreateFav]);
 
   const handleSubmit = useCallback(() => {
     const trimmed = inputValue.trim();
@@ -209,7 +189,9 @@ export default function ExpandedPanel({
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
         />
-        <button onClick={handleSubmit}>添加</button>
+        <button onClick={handleSubmit} disabled={loading}>
+          {loading ? '加载中…' : '添加'}
+        </button>
       </div>
 
       <div className="ep-tabs" data-no-drag>
@@ -227,27 +209,22 @@ export default function ExpandedPanel({
       <div className="ep-content" data-no-drag>
         {activeTab === 'playlist' && (
           <>
-            {currentAudio && (
-              <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)' }}>
-                <button className="ep-ctrl-btn" onClick={handleAddToFav} title="添加当前歌曲到收藏夹"
-                  style={{ width: 'auto', padding: '0 12px', gap: '6px', fontSize: '11px', borderRadius: '8px', background: 'var(--surface-hover)' }}>
-                  <span>+</span> 收藏
-                </button>
-              </div>
-            )}
             <Playlist
               tracks={tracks}
               currentIndex={currentIndex}
               isPlaying={isPlaying}
+              favorites={favorites}
               onPlayTrack={onPlayTrack}
               onDeleteTrack={onDeleteTrack}
               onMoveTrackUp={onMoveTrackUp}
+              onToggleFavorite={onToggleFavorite}
             />
           </>
         )}
 
         {activeTab === 'favs' && (
-          <FavoritesTab favorites={favorites} onCreateFavorite={onCreateFavorite} onPlayTrack={onPlayTrack} />
+          <FavoritesTab favorites={favorites} onCreateFavorite={onCreateFavorite}
+            onPlayTrack={onPlayFromFavorite} onRemoveTrack={undefined} />
         )}
 
         {activeTab === 'recent' && (

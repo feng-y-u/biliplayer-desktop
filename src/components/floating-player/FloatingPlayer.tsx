@@ -2,10 +2,13 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import ExpandedPanel from './ExpandedPanel';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
 import './FloatingPlayer.css';
-import type { CollapsedState, PlayerState, PlaylistState, PlayMode, WindowPosition, Track, FavoriteFolder } from '@/types';
+import type { CollapsedState, PlayerState, PlaylistState, PlayMode, WindowPosition, WindowSize, Track, FavoriteFolder } from '@/types';
 
-const WIN_W = 320;
-const WIN_H = 480;
+// Sizes: collapsed is just the circle; hovered = circle + hover-bar; expanded = full panel
+const COLLAPSED_W = 200;
+const COLLAPSED_H = 72;
+const EXPANDED_MIN_W = 320;
+const EXPANDED_MIN_H = 480;
 
 interface FloatingPlayerProps {
   storage: {
@@ -14,6 +17,7 @@ interface FloatingPlayerProps {
     tracks: Track[];
     currentIndex: number;
     windowPosition: WindowPosition;
+    windowSize: WindowSize;
     favorites: FavoriteFolder[];
     recentTracks: Track[];
     setVolume: (v: number) => void;
@@ -21,6 +25,7 @@ interface FloatingPlayerProps {
     setTracks: (t: Track[]) => void;
     setCurrentIndex: (i: number) => void;
     setWindowPosition: (p: WindowPosition) => void;
+    setWindowSize: (s: WindowSize) => void;
   };
   playerState: PlayerState;
   playlistState: PlaylistState;
@@ -34,8 +39,10 @@ interface FloatingPlayerProps {
   onMoveTrackUp: (index: number) => void;
   onPlayModeChange: (mode: PlayMode) => void;
   onInputSubmit: (input: string) => void;
+  loading: boolean;
   onCreateFavorite: (name: string) => void;
-  onAddTrackToFavorite: (favId: string, track: Track) => void;
+  onToggleFavorite: (track: Track) => void;
+  onPlayFromFavorite: (track: Track) => void;
 }
 
 export default function FloatingPlayer({
@@ -52,13 +59,15 @@ export default function FloatingPlayer({
   onMoveTrackUp,
   onPlayModeChange,
   onInputSubmit: _onInputSubmit,
+  loading,
   onCreateFavorite,
-  onAddTrackToFavorite,
+  onToggleFavorite,
+  onPlayFromFavorite,
 }: FloatingPlayerProps) {
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
-  const [hovered, setHovered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const didDrag = useRef(false);
+  const isFirstRender = useRef(true);
   const dragSession = useRef<{
     startScreenX: number;
     startScreenY: number;
@@ -66,12 +75,32 @@ export default function FloatingPlayer({
     startWinY: number;
     dragging: boolean;
   } | null>(null);
+  const resizeSession = useRef<{
+    startScreenX: number;
+    startScreenY: number;
+    startW: number;
+    startH: number;
+    edge: 'e' | 'se' | 's';
+  } | null>(null);
 
-  // Set window size and restore position on mount
+  // Resize window: expanded vs collapsed
+  useEffect(() => {
+    if (isFirstRender.current) return;
+    const api = window.electronAPI;
+    if (collapsedState === 'expanded') {
+      api.windowResize(storage.windowSize.width, storage.windowSize.height);
+      api.windowSetMinimumSize(EXPANDED_MIN_W, EXPANDED_MIN_H);
+    } else {
+      api.windowResize(COLLAPSED_W, COLLAPSED_H);
+    }
+  }, [collapsedState, storage.windowSize.width, storage.windowSize.height]);
+
+  // Set initial window size (collapsed) and restore saved position on mount
   useEffect(() => {
     (async () => {
+      isFirstRender.current = false;
       const api = window.electronAPI;
-      await api.windowResize(WIN_W, WIN_H);
+      await api.windowResize(COLLAPSED_W, COLLAPSED_H);
       const pos = await api.windowGetPosition();
       const wp = storage.windowPosition;
       if (wp.left !== 0 || wp.top !== 0) {
@@ -124,8 +153,50 @@ export default function FloatingPlayer({
     };
   }, []);
 
+  // Resize handling
+  useEffect(() => {
+    function onResizeMove(e: MouseEvent) {
+      const rs = resizeSession.current;
+      if (!rs) return;
+
+      const dx = e.screenX - rs.startScreenX;
+      const dy = e.screenY - rs.startScreenY;
+
+      let newW = rs.startW;
+      let newH = rs.startH;
+      if (rs.edge === 'e' || rs.edge === 'se') {
+        newW = Math.max(EXPANDED_MIN_W, rs.startW + dx);
+      }
+      if (rs.edge === 's' || rs.edge === 'se') {
+        newH = Math.max(EXPANDED_MIN_H, rs.startH + dy);
+      }
+
+      const newSize = { width: newW, height: newH };
+      window.electronAPI.windowResize(newW, newH);
+      storage.setWindowSize(newSize);
+    }
+
+    function onResizeUp() {
+      if (!resizeSession.current) return;
+      resizeSession.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    window.addEventListener('mousemove', onResizeMove);
+    window.addEventListener('mouseup', onResizeUp);
+    return () => {
+      window.removeEventListener('mousemove', onResizeMove);
+      window.removeEventListener('mouseup', onResizeUp);
+    };
+  }, [storage.setWindowSize]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (collapsedState === 'expanded') return;
+    // In expanded state, only start drag from the top bar
+    if (collapsedState === 'expanded') {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.ep-top-bar')) return;
+    }
     dragSession.current = {
       startScreenX: e.screenX,
       startScreenY: e.screenY,
@@ -135,6 +206,19 @@ export default function FloatingPlayer({
     };
     didDrag.current = false;
   }, [collapsedState]);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent, edge: 'e' | 'se' | 's') => {
+    e.stopPropagation();
+    e.preventDefault();
+    resizeSession.current = {
+      startScreenX: e.screenX,
+      startScreenY: e.screenY,
+      startW: storage.windowSize.width,
+      startH: storage.windowSize.height,
+      edge,
+    };
+    document.body.style.userSelect = 'none';
+  }, [storage.windowSize]);
 
   const handleThumbClick = useCallback(() => {
     if (didDrag.current) {
@@ -146,88 +230,76 @@ export default function FloatingPlayer({
 
   const handleClose = useCallback(() => {
     setCollapsedState('collapsed');
-    setHovered(false);
   }, []);
-
-  // Click outside to collapse
-  useEffect(() => {
-    if (collapsedState !== 'expanded') return;
-    const handleDocClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (containerRef.current?.contains(target)) return;
-      if (target.closest('.expanded-panel')) return;
-      setCollapsedState('collapsed');
-      setHovered(false);
-    };
-    document.addEventListener('mousedown', handleDocClick);
-    return () => document.removeEventListener('mousedown', handleDocClick);
-  }, [collapsedState]);
 
   return (
     <div
       ref={containerRef}
-      className="float-player"
+      className={`float-player${collapsedState === 'expanded' ? ' expanded' : ''}`}
       onMouseDown={handleMouseDown}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { if (collapsedState !== 'expanded') setHovered(false); }}
     >
       {collapsedState !== 'expanded' && (
         <>
+          <div className="hover-bar">
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); onPlayPause(); }} title="播放/暂停">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                {playerState.isPlaying
+                  ? <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
+                  : <path d="M8 5v14l11-7z" />
+                }
+              </svg>
+            </button>
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); onNext(); }} title="下一首">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+            </button>
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); onPlayModeChange(nextMode(playlistState.playMode)); }} title={modeTitle(playlistState.playMode)}>
+              <ModeIcon mode={playlistState.playMode} />
+            </button>
+          </div>
           <div className={`player-thumb${playerState.isPlaying ? ' playing' : ''}`} onClick={handleThumbClick}>
             {playerState.currentAudio?.cover ? (
-              <img className="cover-img" src={playerState.currentAudio.cover} alt="" />
+              <div className="thumb-inner" style={{ backgroundImage: `url(${playerState.currentAudio.cover})` }} />
             ) : (
               <span className="note-icon">♪</span>
             )}
           </div>
-
-          {hovered && (
-            <div className="hover-bar visible">
-              <button data-no-drag onClick={onPlayPause} title="播放/暂停">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  {playerState.isPlaying
-                    ? <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
-                    : <path d="M8 5v14l11-7z" />
-                  }
-                </svg>
-              </button>
-              <button data-no-drag onClick={onNext} title="下一首">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
-              </button>
-              <button data-no-drag onClick={() => onPlayModeChange(nextMode(playlistState.playMode))} title={modeTitle(playlistState.playMode)}>
-                <ModeIcon mode={playlistState.playMode} />
-              </button>
-            </div>
-          )}
         </>
       )}
 
       {collapsedState === 'expanded' && (
-        <ExpandedPanel
-          currentAudio={playerState.currentAudio}
-          currentTime={playerState.currentTime}
-          duration={playerState.duration}
-          isPlaying={playerState.isPlaying}
-          volume={playerState.volume}
-          tracks={playlistState.tracks}
-          currentIndex={playlistState.currentIndex}
-          playMode={playlistState.playMode}
-          favorites={storage.favorites}
-          recentTracks={storage.recentTracks}
-          onPlayPause={onPlayPause}
-          onPrev={onPrev}
-          onNext={onNext}
-          onSeek={onSeek}
-          onVolumeChange={onVolumeChange}
-          onPlayTrack={onPlayTrack}
-          onDeleteTrack={onDeleteTrack}
-          onMoveTrackUp={onMoveTrackUp}
-          onPlayModeChange={onPlayModeChange}
-          onClose={handleClose}
-          onInputSubmit={_onInputSubmit}
-          onCreateFavorite={onCreateFavorite}
-          onAddTrackToFavorite={onAddTrackToFavorite}
-        />
+        <>
+          <ExpandedPanel
+            currentAudio={playerState.currentAudio}
+            currentTime={playerState.currentTime}
+            duration={playerState.duration}
+            isPlaying={playerState.isPlaying}
+            volume={playerState.volume}
+            tracks={playlistState.tracks}
+            currentIndex={playlistState.currentIndex}
+            playMode={playlistState.playMode}
+            favorites={storage.favorites}
+            recentTracks={storage.recentTracks}
+            onPlayPause={onPlayPause}
+            onPrev={onPrev}
+            onNext={onNext}
+            onSeek={onSeek}
+            onVolumeChange={onVolumeChange}
+            onPlayTrack={onPlayTrack}
+            onDeleteTrack={onDeleteTrack}
+            onMoveTrackUp={onMoveTrackUp}
+            onPlayModeChange={onPlayModeChange}
+            onClose={handleClose}
+            onInputSubmit={_onInputSubmit}
+            loading={loading}
+            onCreateFavorite={onCreateFavorite}
+            onToggleFavorite={onToggleFavorite}
+            onPlayFromFavorite={onPlayFromFavorite}
+          />
+          {/* Resize handles */}
+          <div className="resize-handle resize-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />
+          <div className="resize-handle resize-se" onMouseDown={(e) => handleResizeStart(e, 'se')} />
+          <div className="resize-handle resize-s" onMouseDown={(e) => handleResizeStart(e, 's')} />
+        </>
       )}
     </div>
   );
