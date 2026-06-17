@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import './ExpandedPanel.css';
 import './panel.css';
 import './controls.css';
 import './content.css';
@@ -7,10 +6,10 @@ import Playlist from './Playlist';
 import FavoritesTab from './FavoritesTab';
 import RecentTab from './RecentTab';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
-import type { Track, PlayMode, FavoriteFolder } from '@/types';
+import type { Track, PlayMode, FavoriteFolder, CurrentAudio } from '@/types';
 
 interface ExpandedPanelProps {
-  currentAudio?: { bvid: string; cid: number; title: string; author: string; cover: string } | null;
+  currentAudio?: CurrentAudio | null;
   currentTime: number;
   duration: number;
   isPlaying: boolean;
@@ -20,21 +19,32 @@ interface ExpandedPanelProps {
   playMode: PlayMode;
   favorites: FavoriteFolder[];
   recentTracks: Track[];
-  onPlayPause: () => void;
-  onPrev: () => void;
-  onNext: () => void;
-  onSeek: (time: number) => void;
-  onVolumeChange: (v: number) => void;
-  onPlayTrack: (index: number) => void;
-  onDeleteTrack: (index: number) => void;
-  onMoveTrackUp: (index: number) => void;
-  onPlayModeChange: (mode: PlayMode) => void;
+  playerActions: {
+    onPlayPause: () => void;
+    onPrev: () => void;
+    onNext: () => void;
+    onSeek: (time: number) => void;
+    onVolumeChange: (v: number) => void;
+    onPlayModeChange: (mode: PlayMode) => void;
+  };
+  playlistActions: {
+    onPlayTrack: (index: number) => void;
+    onDeleteTrack: (index: number) => void;
+    onClearPlaylist: () => void;
+    onReorderTracks: (fromIndex: number, toIndex: number) => void;
+  };
+  favoriteActions: {
+    onCreateFavorite: (name: string) => void;
+    onToggleFavorite: (track: Track) => void;
+    onPlayFromFavorite: (track: Track) => void;
+    onRemoveFromFavorite: (favId: string, trackIndex: number) => void;
+    onDeleteFavorite: (favId: string) => void;
+    onReorderFavTracks: (favId: string, fromIndex: number, toIndex: number) => void;
+  };
   onClose: () => void;
   onInputSubmit: (input: string) => void;
   loading: boolean;
-  onCreateFavorite: (name: string) => void;
-  onToggleFavorite: (track: Track) => void;
-  onPlayFromFavorite: (track: Track) => void;
+  notification: string | null;
 }
 
 export default function ExpandedPanel({
@@ -47,25 +57,18 @@ export default function ExpandedPanel({
   playMode,
   favorites,
   recentTracks,
-  onPlayPause,
-  onPrev,
-  onNext,
-  onSeek,
-  onPlayTrack,
-  onDeleteTrack,
-  onMoveTrackUp,
-  onPlayModeChange,
+  playerActions,
+  playlistActions,
+  favoriteActions,
   onClose,
   onInputSubmit,
   loading,
-  onCreateFavorite,
-  onToggleFavorite,
-  onPlayFromFavorite,
+  notification,
   volume,
-  onVolumeChange,
 }: ExpandedPanelProps) {
   const [inputValue, setInputValue] = useState('');
   const [activeTab, setActiveTab] = useState<'playlist' | 'favs' | 'recent'>('playlist');
+  const [seekingValue, setSeekingValue] = useState<number | null>(null);
   const prevVolume = useRef(volume);
 
   // Keep prevVolume in sync with actual volume (except when muted)
@@ -80,7 +83,8 @@ export default function ExpandedPanel({
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const progValue = duration ? (currentTime / duration) * 100 : 0;
+  const rawProg = duration ? (currentTime / duration) * 100 : 0;
+  const progValue = seekingValue ?? rawProg;
 
   const handleSubmit = useCallback(() => {
     const trimmed = inputValue.trim();
@@ -92,6 +96,7 @@ export default function ExpandedPanel({
 
   return (
     <div className="expanded-panel open">
+      {notification && <div className="ep-notification">{notification}</div>}
       <div className="ep-top-bar">
         <h3>Piliplayer</h3>
         <div className="ep-top-btns" data-no-drag>
@@ -114,7 +119,7 @@ export default function ExpandedPanel({
             )}
           </div>
           <div className="ep-np-info">
-            <div className="ep-np-title">{currentAudio.title}</div>
+            <div className="ep-np-title" title={currentAudio.title}>{currentAudio.title}</div>
             <div className="ep-np-artist">{currentAudio.author}</div>
           </div>
         </div>
@@ -126,15 +131,15 @@ export default function ExpandedPanel({
       )}
 
       <div className="ep-controls" data-no-drag>
-        <button className="ep-mode-btn" onClick={() => onPlayModeChange(nextMode(playMode))} title={modeTitle(playMode)}>
+        <button className="ep-mode-btn" onClick={() => playerActions.onPlayModeChange(nextMode(playMode))} title={modeTitle(playMode)}>
           <ModeIcon mode={playMode} />
         </button>
 
         <div className="ep-ctrl-center">
-          <button className="ep-ctrl-btn" onClick={onPrev} title="上一首">
+          <button className="ep-ctrl-btn" onClick={playerActions.onPrev} title="上一首">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
           </button>
-          <button className="ep-play-btn" onClick={onPlayPause} title="播放/暂停">
+          <button className="ep-play-btn" onClick={playerActions.onPlayPause} title="播放/暂停">
             <svg viewBox="0 0 24 24" fill="currentColor">
               {isPlaying
                 ? <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
@@ -142,14 +147,14 @@ export default function ExpandedPanel({
               }
             </svg>
           </button>
-          <button className="ep-ctrl-btn" onClick={onNext} title="下一首">
+          <button className="ep-ctrl-btn" onClick={playerActions.onNext} title="下一首">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
           </button>
         </div>
 
         <button className="ep-vol-btn" onClick={() => {
-          if (volume > 0) { prevVolume.current = volume; onVolumeChange(0); }
-          else onVolumeChange(prevVolume.current);
+          if (volume > 0) { prevVolume.current = volume; playerActions.onVolumeChange(0); }
+          else playerActions.onVolumeChange(prevVolume.current);
         }} title={volume > 0 ? '静音' : '恢复音量'}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             {volume > 0 ? (
@@ -167,7 +172,7 @@ export default function ExpandedPanel({
           </svg>
         </button>
         <input className="ep-vol-slider" type="range" min={0} max={1} step={0.01} value={volume}
-          onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+          onChange={(e) => playerActions.onVolumeChange(parseFloat(e.target.value))}
         />
       </div>
 
@@ -175,7 +180,9 @@ export default function ExpandedPanel({
         <div className="ep-prog-bar">
           <div className="ep-prog-fill" style={{ width: `${progValue}%` }} />
           <input type="range" min={0} max={100} step={0.1} value={progValue}
-            onChange={(e) => { if (duration) onSeek((parseFloat(e.target.value) / 100) * duration); }}
+            onChange={(e) => { const v = parseFloat(e.target.value); setSeekingValue(v); if (duration) playerActions.onSeek((v / 100) * duration); }}
+            onMouseUp={() => setSeekingValue(null)}
+            onMouseLeave={() => setSeekingValue(null)}
           />
         </div>
         <div className="ep-times">
@@ -204,31 +211,35 @@ export default function ExpandedPanel({
         <button className={`ep-tab ${activeTab === 'recent' ? 'active' : ''}`} onClick={() => setActiveTab('recent')}>
           最近
         </button>
+        {activeTab === 'playlist' && tracks.length > 0 && (
+          <button className="ep-tab-clear" onClick={playlistActions.onClearPlaylist} title="清空播放列表">清空</button>
+        )}
       </div>
 
       <div className="ep-content" data-no-drag>
         {activeTab === 'playlist' && (
-          <>
-            <Playlist
-              tracks={tracks}
-              currentIndex={currentIndex}
-              isPlaying={isPlaying}
-              favorites={favorites}
-              onPlayTrack={onPlayTrack}
-              onDeleteTrack={onDeleteTrack}
-              onMoveTrackUp={onMoveTrackUp}
-              onToggleFavorite={onToggleFavorite}
-            />
-          </>
+          <Playlist
+            tracks={tracks}
+            currentIndex={currentIndex}
+            isPlaying={isPlaying}
+            favorites={favorites}
+            onPlayTrack={playlistActions.onPlayTrack}
+            onDeleteTrack={playlistActions.onDeleteTrack}
+            onToggleFavorite={favoriteActions.onToggleFavorite}
+            onReorderTracks={playlistActions.onReorderTracks}
+          />
         )}
 
         {activeTab === 'favs' && (
-          <FavoritesTab favorites={favorites} onCreateFavorite={onCreateFavorite}
-            onPlayTrack={onPlayFromFavorite} onRemoveTrack={undefined} />
+          <FavoritesTab favorites={favorites} onCreateFavorite={favoriteActions.onCreateFavorite}
+            onPlayTrack={favoriteActions.onPlayFromFavorite} onRemoveTrack={favoriteActions.onRemoveFromFavorite}
+            onDeleteFavorite={favoriteActions.onDeleteFavorite} onReorderTracks={favoriteActions.onReorderFavTracks} />
         )}
 
         {activeTab === 'recent' && (
-          <RecentTab recentTracks={recentTracks} currentAudio={currentAudio} onPlayTrack={onPlayFromFavorite} />
+          <RecentTab recentTracks={recentTracks} currentAudio={currentAudio}
+            onPlayTrack={favoriteActions.onPlayFromFavorite} favorites={favorites}
+            onToggleFavorite={favoriteActions.onToggleFavorite} />
         )}
       </div>
     </div>

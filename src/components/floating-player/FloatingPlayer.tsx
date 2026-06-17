@@ -12,57 +12,52 @@ const EXPANDED_MIN_H = 480;
 
 interface FloatingPlayerProps {
   storage: {
-    volume: number;
-    playMode: PlayMode;
-    tracks: Track[];
-    currentIndex: number;
     windowPosition: WindowPosition;
     windowSize: WindowSize;
     favorites: FavoriteFolder[];
     recentTracks: Track[];
-    setVolume: (v: number) => void;
-    setPlayMode: (p: PlayMode) => void;
-    setTracks: (t: Track[]) => void;
-    setCurrentIndex: (i: number) => void;
     setWindowPosition: (p: WindowPosition) => void;
     setWindowSize: (s: WindowSize) => void;
   };
   playerState: PlayerState;
   playlistState: PlaylistState;
-  onPlayPause: () => void;
-  onPlayTrack: (index: number) => void;
-  onPrev: () => void;
-  onNext: () => void;
-  onSeek: (time: number) => void;
-  onVolumeChange: (v: number) => void;
-  onDeleteTrack: (index: number) => void;
-  onMoveTrackUp: (index: number) => void;
-  onPlayModeChange: (mode: PlayMode) => void;
+  playerActions: {
+    onPlayPause: () => void;
+    onPrev: () => void;
+    onNext: () => void;
+    onSeek: (time: number) => void;
+    onVolumeChange: (v: number) => void;
+    onPlayModeChange: (mode: PlayMode) => void;
+  };
+  playlistActions: {
+    onPlayTrack: (index: number) => void;
+    onDeleteTrack: (index: number) => void;
+    onClearPlaylist: () => void;
+    onReorderTracks: (fromIndex: number, toIndex: number) => void;
+  };
+  favoriteActions: {
+    onCreateFavorite: (name: string) => void;
+    onToggleFavorite: (track: Track) => void;
+    onPlayFromFavorite: (track: Track) => void;
+    onRemoveFromFavorite: (favId: string, trackIndex: number) => void;
+    onDeleteFavorite: (favId: string) => void;
+    onReorderFavTracks: (favId: string, fromIndex: number, toIndex: number) => void;
+  };
   onInputSubmit: (input: string) => void;
   loading: boolean;
-  onCreateFavorite: (name: string) => void;
-  onToggleFavorite: (track: Track) => void;
-  onPlayFromFavorite: (track: Track) => void;
+  notification: string | null;
 }
 
 export default function FloatingPlayer({
   storage,
   playerState,
   playlistState,
-  onPlayPause,
-  onPlayTrack,
-  onPrev,
-  onNext,
-  onSeek,
-  onVolumeChange,
-  onDeleteTrack,
-  onMoveTrackUp,
-  onPlayModeChange,
+  playerActions,
+  playlistActions,
+  favoriteActions,
   onInputSubmit: _onInputSubmit,
   loading,
-  onCreateFavorite,
-  onToggleFavorite,
-  onPlayFromFavorite,
+  notification,
 }: FloatingPlayerProps) {
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -242,7 +237,7 @@ export default function FloatingPlayer({
       {collapsedState !== 'expanded' && (
         <>
           <div className="hover-bar">
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); onPlayPause(); }} title="播放/暂停">
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayPause(); }} title="播放/暂停">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 {playerState.isPlaying
                   ? <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
@@ -250,10 +245,10 @@ export default function FloatingPlayer({
                 }
               </svg>
             </button>
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); onNext(); }} title="下一首">
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onNext(); }} title="下一首">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
             </button>
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); onPlayModeChange(nextMode(playlistState.playMode)); }} title={modeTitle(playlistState.playMode)}>
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayModeChange(nextMode(playlistState.playMode)); }} title={modeTitle(playlistState.playMode)}>
               <ModeIcon mode={playlistState.playMode} />
             </button>
           </div>
@@ -280,21 +275,13 @@ export default function FloatingPlayer({
             playMode={playlistState.playMode}
             favorites={storage.favorites}
             recentTracks={storage.recentTracks}
-            onPlayPause={onPlayPause}
-            onPrev={onPrev}
-            onNext={onNext}
-            onSeek={onSeek}
-            onVolumeChange={onVolumeChange}
-            onPlayTrack={onPlayTrack}
-            onDeleteTrack={onDeleteTrack}
-            onMoveTrackUp={onMoveTrackUp}
-            onPlayModeChange={onPlayModeChange}
+            playerActions={playerActions}
+            playlistActions={playlistActions}
+            favoriteActions={favoriteActions}
             onClose={handleClose}
             onInputSubmit={_onInputSubmit}
             loading={loading}
-            onCreateFavorite={onCreateFavorite}
-            onToggleFavorite={onToggleFavorite}
-            onPlayFromFavorite={onPlayFromFavorite}
+            notification={notification}
           />
           {/* Resize handles */}
           <div className="resize-handle resize-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />

@@ -11,7 +11,6 @@ app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-gpu-cache');
 
 const store = new Store<{
-  windowBounds: { x: number | undefined; y: number | undefined; width: number; height: number };
   volume: number;
   playMode: 'loop' | 'single' | 'shuffle';
   playlist: any[];

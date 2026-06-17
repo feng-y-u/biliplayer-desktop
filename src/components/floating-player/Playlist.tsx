@@ -1,3 +1,4 @@
+import { useRef, useCallback } from 'react';
 import './Playlist.css';
 import type { Track, FavoriteFolder } from '@/types';
 
@@ -8,8 +9,8 @@ interface PlaylistProps {
   favorites: FavoriteFolder[];
   onPlayTrack: (index: number) => void;
   onDeleteTrack: (index: number) => void;
-  onMoveTrackUp: (index: number) => void;
   onToggleFavorite: (track: Track) => void;
+  onReorderTracks?: (fromIndex: number, toIndex: number) => void;
 }
 
 function formatDuration(seconds?: number): string {
@@ -32,11 +33,54 @@ export default function Playlist({
   favorites,
   onPlayTrack,
   onDeleteTrack,
-  onMoveTrackUp,
   onToggleFavorite,
+  onReorderTracks,
 }: PlaylistProps) {
+  const dragIndex = useRef<number | null>(null);
+
+  const handleDragStart = useCallback((index: number) => {
+    dragIndex.current = index;
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    const el = e.currentTarget as HTMLElement;
+    el.style.borderTop = index > (dragIndex.current ?? -1) ? '2px solid var(--accent)' : '';
+    el.style.borderBottom = index <= (dragIndex.current ?? -1) ? '2px solid var(--accent)' : '';
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    const el = e.currentTarget as HTMLElement;
+    el.style.borderTop = '';
+    el.style.borderBottom = '';
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, toIndex: number) => {
+    e.preventDefault();
+    const el = e.currentTarget as HTMLElement;
+    el.style.borderTop = '';
+    el.style.borderBottom = '';
+    const from = dragIndex.current;
+    dragIndex.current = null;
+    if (from !== null && from !== toIndex && onReorderTracks) {
+      onReorderTracks(from, toIndex);
+    }
+  }, [onReorderTracks]);
+
+  const handleDragEnd = useCallback(() => {
+    dragIndex.current = null;
+  }, []);
+
   if (tracks.length === 0) {
-    return <div className="playlist"></div>;
+    return (
+      <div className="playlist" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        <div className="ep-empty" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', marginBottom: '8px', color: 'var(--fg-2)' }}>♪</div>
+          <div style={{ color: 'var(--fg-2)' }}>播放列表为空</div>
+          <div style={{ fontSize: '11px', marginTop: '4px', color: 'var(--fg-3)' }}>在上方输入 BV 号或收藏夹链接添加歌曲</div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -48,6 +92,12 @@ export default function Playlist({
             key={`${track.bvid}-${index}`}
             className={`playlist-item${isActive ? ' active' : ''}`}
             data-no-drag
+            draggable={!!onReorderTracks}
+            onDragStart={() => handleDragStart(index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
             onClick={() => onPlayTrack(index)}
           >
             <span className="pl-idx">
@@ -70,7 +120,7 @@ export default function Playlist({
               )}
             </div>
             <div className="pl-info">
-              <div className="pl-title">{track.title}</div>
+              <div className="pl-title" title={track.title}>{track.title}</div>
               <div className="pl-artist">{track.author}</div>
             </div>
             <span className="pl-dur">{formatDuration(track.duration)}</span>
@@ -84,7 +134,6 @@ export default function Playlist({
               </button>
             )}
             <div className="pl-actions" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => onMoveTrackUp(index)} title="置顶">↑</button>
               <button onClick={() => onDeleteTrack(index)} title="删除">✕</button>
             </div>
           </div>

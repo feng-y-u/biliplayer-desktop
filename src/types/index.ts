@@ -16,6 +16,11 @@ export interface WindowPosition {
   top: number;
 }
 
+export interface WindowSize {
+  width: number;
+  height: number;
+}
+
 export interface PlaylistState {
   tracks: Track[];
   currentIndex: number;
@@ -27,7 +32,7 @@ export interface PlayerState {
   currentTime: number;
   duration: number;
   volume: number;
-  currentAudio: Track | null;
+  currentAudio: CurrentAudio | null;
 }
 
 export interface FavoriteFolder {
@@ -46,3 +51,5 @@ export type ApiMessage =
 export type ApiResponse =
   | { success: true; data: any }
   | { success: false; error: string };
+
+export type CurrentAudio = Pick<Track, 'bvid' | 'cid' | 'title' | 'author' | 'cover'>;

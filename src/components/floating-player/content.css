@@ -44,6 +44,7 @@
   border-bottom: 1px solid var(--border);
   padding: 0 16px;
   flex-shrink: 0;
+  position: relative;
 }
 .ep-tab {
   flex: 1;
@@ -73,6 +74,25 @@
   height: 2px;
   background: var(--accent);
   border-radius: 1px;
+}
+
+.ep-tab-clear {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.12s, background 0.12s;
+}
+.ep-tab-clear:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.08);
 }
 
 .ep-content {
@@ -109,25 +129,138 @@
   border-color: var(--accent);
   box-shadow: 0 2px 8px rgba(79, 110, 247, 0.1);
 }
+.ep-fav-card-expand {
+  padding: 0;
+  overflow: hidden;
+}
+.ep-fav-card-expand.expanded {
+  grid-column: 1 / -1;
+}
+.ep-fav-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  cursor: pointer;
+}
 .ep-fav-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  margin-bottom: 6px;
-  color: white;
+  font-size: 18px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
-.ep-fav-name {
+.ep-fav-info {
+  flex: 1;
+  min-width: 0;
+}
+.ep-fav-arrow {
   font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 2px;
+  color: var(--muted);
+  transition: transform 0.15s;
 }
-.ep-fav-meta {
+.ep-fav-arrow.open {
+  transform: rotate(90deg);
+}
+.ep-fav-tracks {
+  border-top: 1px solid var(--border);
+  max-height: 300px;
+  overflow-y: auto;
+}
+.ep-fav-tracks::-webkit-scrollbar {
+  width: 4px;
+}
+.ep-fav-tracks::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ep-fav-tracks::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+.ep-fav-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.ep-fav-track:hover {
+  background: var(--surface-hover);
+}
+.ep-fav-track-info {
+  flex: 1;
+  min-width: 0;
+}
+.ep-fav-track-title {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ep-fav-track-artist {
   font-size: 10px;
   color: var(--muted);
+}
+.ep-fav-track-del {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+}
+.ep-fav-track:hover .ep-fav-track-del {
+  opacity: 1;
+}
+.ep-fav-track-del:hover {
+  color: #e74c3c;
+}
+
+.ep-fav-card {
+  position: relative;
+}
+
+.ep-fav-card-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+  z-index: 1;
+}
+.ep-fav-card:hover .ep-fav-card-del {
+  opacity: 1;
+}
+.ep-fav-card-del:hover {
+  color: #e74c3c;
+}
+.ep-fav-view {
+  /* wrapper for empty state */
 }
 
 .ep-recent-list {

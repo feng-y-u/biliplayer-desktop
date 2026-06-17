@@ -1,8 +1,41 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Track, FavoriteFolder, PlayMode, WindowPosition } from '../types';
+import type { Track, FavoriteFolder, PlayMode, WindowPosition, WindowSize } from '../types';
 import { getVideoInfo, getPlaylist } from '../services/api';
 
-const store = window.electronAPI;
+const store = window.electronAPI!;
+
+/** Debounced batch writer: coalesces rapid store:set calls into one IPC flush. */
+function useBatchStore() {
+  const batchRef = useRef<Record<string, any>>({});
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flush = useCallback(() => {
+    timerRef.current = null;
+    const batch = batchRef.current;
+    if (Object.keys(batch).length === 0) return;
+    batchRef.current = {};
+    for (const [key, value] of Object.entries(batch)) {
+      store.storeSet(key, value);
+    }
+  }, []);
+
+  const batchSet = useCallback((key: string, value: any) => {
+    batchRef.current[key] = value;
+    if (!timerRef.current) {
+      timerRef.current = setTimeout(flush, 100);
+    }
+  }, [flush]);
+
+  // Flush pending writes on unmount
+  useEffect(() => () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      flush();
+    }
+  }, [flush]);
+
+  return batchSet;
+}
 
 export function usePlayerStore() {
   const [volume, setVolumeState] = useState(0.7);
@@ -12,12 +45,15 @@ export function usePlayerStore() {
   const [favorites, setFavoritesState] = useState<FavoriteFolder[]>([]);
   const [recentTracks, setRecentTracksState] = useState<Track[]>([]);
   const [windowPosition, setWindowPositionState] = useState<WindowPosition>({ left: 0, top: 0 });
+  const [windowSize, setWindowSizeState] = useState<WindowSize>({ width: 400, height: 600 });
   const [loading, setLoading] = useState(false);
 
   const tracksRef = useRef(tracks);
   const currentIndexRef = useRef(currentIndex);
   tracksRef.current = tracks;
   currentIndexRef.current = currentIndex;
+
+  const batchSet = useBatchStore();
 
   useEffect(() => {
     (async () => {
@@ -36,22 +72,24 @@ export function usePlayerStore() {
       if (r) setRecentTracksState(r);
       const wp = await store.storeGet('windowPosition');
       if (wp) setWindowPositionState(wp);
+      const ws = await store.storeGet('windowSize');
+      if (ws) setWindowSizeState(ws);
     })();
   }, []);
 
   const persistPlaylist = useCallback((newTracks: Track[], newIndex: number) => {
-    store.storeSet('playlist', { tracks: newTracks, currentIndex: newIndex });
-  }, []);
+    batchSet('playlist', { tracks: newTracks, currentIndex: newIndex });
+  }, [batchSet]);
 
   const setVolume = useCallback((v: number) => {
     setVolumeState(v);
-    store.storeSet('volume', v);
-  }, []);
+    batchSet('volume', v);
+  }, [batchSet]);
 
   const setPlayMode = useCallback((p: PlayMode) => {
     setPlayModeState(p);
-    store.storeSet('playMode', p);
-  }, []);
+    batchSet('playMode', p);
+  }, [batchSet]);
 
   const setTracks = useCallback((t: Track[]) => {
     setTracksState(t);
@@ -65,18 +103,23 @@ export function usePlayerStore() {
 
   const setFavorites = useCallback((f: FavoriteFolder[]) => {
     setFavoritesState(f);
-    store.storeSet('favorites', f);
-  }, []);
+    batchSet('favorites', f);
+  }, [batchSet]);
 
   const setRecentTracks = useCallback((t: Track[]) => {
     setRecentTracksState(t);
-    store.storeSet('recentTracks', t);
-  }, []);
+    batchSet('recentTracks', t);
+  }, [batchSet]);
 
   const setWindowPosition = useCallback((p: WindowPosition) => {
     setWindowPositionState(p);
-    store.storeSet('windowPosition', p);
-  }, []);
+    batchSet('windowPosition', p);
+  }, [batchSet]);
+
+  const setWindowSize = useCallback((s: WindowSize) => {
+    setWindowSizeState(s);
+    batchSet('windowSize', s);
+  }, [batchSet]);
 
   const loadVideo = useCallback(async (bvid: string): Promise<Track> => {
     setLoading(true);
@@ -112,6 +155,24 @@ export function usePlayerStore() {
     }
   }, [persistPlaylist]);
 
+  const reorderTracks = useCallback((fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setTracksState((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved!);
+      let newIndex = currentIndexRef.current;
+      if (currentIndexRef.current === fromIndex) newIndex = toIndex;
+      else {
+        if (fromIndex < currentIndexRef.current && toIndex >= currentIndexRef.current) newIndex = currentIndexRef.current - 1;
+        else if (fromIndex > currentIndexRef.current && toIndex <= currentIndexRef.current) newIndex = currentIndexRef.current + 1;
+      }
+      setCurrentIndexState(newIndex);
+      persistPlaylist(next, newIndex);
+      return next;
+    });
+  }, [persistPlaylist]);
+
   const deleteTrack = useCallback((index: number) => {
     setTracksState((prev) => {
       const next = [...prev];
@@ -126,26 +187,6 @@ export function usePlayerStore() {
     });
   }, [persistPlaylist]);
 
-  const moveTrackUp = useCallback((index: number) => {
-    if (index <= 0) return;
-    setTracksState((prev) => {
-      const next = [...prev] as Track[];
-      [next[index - 1], next[index]] = [next[index]!, next[index - 1]!];
-      if (currentIndexRef.current === index) {
-        const newIndex = index - 1;
-        setCurrentIndexState(newIndex);
-        persistPlaylist(next, newIndex);
-      } else if (currentIndexRef.current === index - 1) {
-        const newIndex = index;
-        setCurrentIndexState(newIndex);
-        persistPlaylist(next, newIndex);
-      } else {
-        persistPlaylist(next, currentIndexRef.current);
-      }
-      return next;
-    });
-  }, [persistPlaylist]);
-
   const addTrackToFavorite = useCallback((favId: string, track: Track) => {
     setFavoritesState((prev) => {
       const next = prev.map(f => {
@@ -153,10 +194,33 @@ export function usePlayerStore() {
         if (f.tracks.some(t => t.bvid === track.bvid && t.cid === track.cid)) return f;
         return { ...f, tracks: [...f.tracks, track], updatedAt: Date.now() };
       });
-      store.storeSet('favorites', next);
+      batchSet('favorites', next);
       return next;
     });
-  }, []);
+  }, [batchSet]);
+
+  const deleteFavorite = useCallback((favId: string) => {
+    setFavoritesState((prev) => {
+      const next = prev.filter(f => f.id !== favId);
+      batchSet('favorites', next);
+      return next;
+    });
+  }, [batchSet]);
+
+  const reorderFavoriteTracks = useCallback((favId: string, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setFavoritesState((prev) => {
+      const next = prev.map(f => {
+        if (f.id !== favId) return f;
+        const tracks = [...f.tracks];
+        const [moved] = tracks.splice(fromIndex, 1);
+        tracks.splice(toIndex, 0, moved!);
+        return { ...f, tracks, updatedAt: Date.now() };
+      });
+      batchSet('favorites', next);
+      return next;
+    });
+  }, [batchSet]);
 
   const removeTrackFromFavorite = useCallback((favId: string, trackIndex: number) => {
     setFavoritesState((prev) => {
@@ -166,10 +230,10 @@ export function usePlayerStore() {
         tracks.splice(trackIndex, 1);
         return { ...f, tracks, updatedAt: Date.now() };
       });
-      store.storeSet('favorites', next);
+      batchSet('favorites', next);
       return next;
     });
-  }, []);
+  }, [batchSet]);
 
   return {
     volume, setVolume,
@@ -179,9 +243,12 @@ export function usePlayerStore() {
     favorites, setFavorites,
     recentTracks, setRecentTracks,
     windowPosition, setWindowPosition,
+    windowSize, setWindowSize,
     loading,
     loadVideo, loadPlaylist,
-    deleteTrack, moveTrackUp,
+    deleteTrack, reorderTracks,
     addTrackToFavorite, removeTrackFromFavorite,
+    deleteFavorite,
+    reorderFavoriteTracks,
   };
 }

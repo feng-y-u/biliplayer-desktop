@@ -1,7 +1,56 @@
 .float-player {
   position: fixed;
-  z-index: 100;
+  width: 100%;
+  height: 100%;
   background: transparent;
+  transition: background 0.2s ease;
+}
+.float-player.expanded {
+  background: var(--surface);
+}
+
+/* ── Collapsed → expanded scale animation ── */
+.expanded-panel {
+  animation: panelExpand 0.2s ease-out;
+}
+@keyframes panelExpand {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Notification toast ── */
+.ep-notification {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--fg);
+  color: white;
+  font-size: 11px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  z-index: 20;
+  animation: notifyIn 0.2s ease-out;
+  pointer-events: none;
+}
+@keyframes notifyIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Collapsed: horizontal strip, hover-bar left, thumb right */
+.float-player:not(.expanded) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-left: 8px;
 }
 
 /* Prevent browser's native image drag */
@@ -22,6 +71,7 @@
   align-items: center;
   justify-content: center;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  flex-shrink: 0;
 }
 .player-thumb:hover {
   transform: scale(1.05);
@@ -33,10 +83,11 @@
 .player-thumb.playing {
   animation: spin 8s linear infinite;
 }
-.player-thumb .cover-img {
+.thumb-inner {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  background-size: cover;
+  background-position: center;
 }
 .player-thumb .note-icon {
   color: white;
@@ -49,28 +100,25 @@
 }
 
 .hover-bar {
-  position: absolute;
-  top: 50%;
-  right: calc(100% + 8px);
-  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 2px;
   background: var(--surface);
   border-radius: 28px;
-  padding: 4px;
-  box-shadow: var(--shadow);
+  padding: 4px 4px 4px 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-right: 8px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.15s ease;
 }
-.hover-bar.visible {
+.float-player:not(.expanded):hover .hover-bar {
   opacity: 1;
   pointer-events: auto;
 }
 .hover-bar button {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: none;
   background: none;
@@ -86,6 +134,68 @@
   color: var(--accent);
 }
 .hover-bar button svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Resize handles ── */
+.resize-handle {
+  position: fixed;
+  z-index: 10;
+}
+.resize-e {
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+.resize-e::after {
+  content: '';
+  position: absolute;
+  right: 1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 20px;
+  background: var(--muted);
+  border-radius: 1px;
+  opacity: 0.3;
+}
+.resize-s {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+.resize-s::after {
+  content: '';
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--muted);
+  border-radius: 1px;
+  opacity: 0.3;
+}
+.resize-se {
+  right: 0;
+  bottom: 0;
   width: 16px;
   height: 16px;
+  cursor: nwse-resize;
+}
+.resize-se::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  opacity: 0.4;
 }

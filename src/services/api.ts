@@ -7,13 +7,15 @@ declare global {
       windowMove: (x: number, y: number) => Promise<void>;
       windowResize: (w: number, h: number) => Promise<void>;
       windowGetPosition: () => Promise<{ x: number; y: number; width: number; height: number }>;
+      windowSetMinimumSize: (w: number, h: number) => Promise<void>;
     };
   }
 }
 
 const api = window.electronAPI?.api;
 
-let audioEl: HTMLAudioElement | null = null;
+let audioEl: HTMLAudioElement | null = new Audio();
+audioEl.volume = 0.7;
 let currentUrl = '';
 let currentExpiresAt = 0;
 let currentBvid = '';
@@ -45,8 +47,6 @@ export async function loadAudioTrack(bvid: string, cid: number): Promise<{ url: 
     if (bvid === currentBvid && cid === currentCid && currentUrl && currentExpiresAt > Date.now() + 60_000) {
       return { url: currentUrl, expiresAt: currentExpiresAt };
     }
-    const info = await getVideoInfo(bvid);
-    if (info.success && info.data?.cid) cid = info.data.cid;
     const res = await getAudioUrl(bvid, cid);
     if (!res.success) return null;
     currentUrl = res.data.url;
@@ -95,11 +95,5 @@ export async function refreshAudioUrl(bvid: string, cid: number) {
   if (res.success) {
     currentUrl = res.data.url;
     currentExpiresAt = res.data.expiresAt;
-    if (audioEl && !audioEl.paused) {
-      const currentTime = audioEl.currentTime;
-      audioEl.src = currentUrl;
-      audioEl.currentTime = currentTime;
-      audioEl.play();
-    }
   }
 }

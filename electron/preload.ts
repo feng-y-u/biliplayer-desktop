@@ -7,4 +7,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMove: (x: number, y: number) => ipcRenderer.send('window:move', x, y),
   windowResize: (w: number, h: number) => ipcRenderer.invoke('window:resize', w, h),
   windowGetPosition: () => ipcRenderer.invoke('window:getPosition'),
+  windowSetMinimumSize: (w: number, h: number) => ipcRenderer.invoke('window:setMinimumSize', w, h),
 });

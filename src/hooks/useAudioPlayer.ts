@@ -6,7 +6,6 @@ import {
   resumeAudioLocal,
   seekAudioLocal,
   setVolumeLocal,
-  getLocalPlayerState,
   getAudioElement,
   refreshAudioUrl,
 } from '../services/api';
@@ -19,82 +18,113 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
     volume: 0.7,
     currentAudio: null,
   });
-  const intervalRef = useRef<number | null>(null);
   const onTrackEndRef = useRef(onTrackEnd);
   onTrackEndRef.current = onTrackEnd;
+  const refreshTimerRef = useRef<number | null>(null);
+  const currentAudioRef = useRef(state.currentAudio);
+  currentAudioRef.current = state.currentAudio;
 
-  const pollState = useCallback(() => {
-    const local = getLocalPlayerState();
-    setState((prev) => ({
-      ...prev,
-      isPlaying: local.isPlaying,
-      currentTime: local.currentTime,
-      duration: local.duration,
-      volume: local.volume,
-    }));
-  }, []);
-
+  // Attach event listeners to audio element once it exists
   useEffect(() => {
-    intervalRef.current = window.setInterval(pollState, 500);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [pollState]);
+    const cleanup: (() => void)[] = [];
 
-  useEffect(() => {
-    const handleEnded = () => {
-      pollState();
-      onTrackEndRef.current?.();
-    };
+    function attach(el: HTMLAudioElement) {
+      const onTimeUpdate = () => setState(prev => ({ ...prev, currentTime: el.currentTime }));
+      const onPlay = () => setState(prev => ({ ...prev, isPlaying: true }));
+      const onPause = () => setState(prev => ({ ...prev, isPlaying: false }));
+      const onMeta = () => setState(prev => ({ ...prev, duration: el.duration }));
+      const onVolume = () => setState(prev => ({ ...prev, volume: el.volume }));
+      const onEnded = () => onTrackEndRef.current?.();
 
-    const audio = getAudioElement();
-    if (audio) {
-      audio.addEventListener('ended', handleEnded);
-      return () => audio.removeEventListener('ended', handleEnded);
+      el.addEventListener('timeupdate', onTimeUpdate);
+      el.addEventListener('play', onPlay);
+      el.addEventListener('pause', onPause);
+      el.addEventListener('loadedmetadata', onMeta);
+      el.addEventListener('volumechange', onVolume);
+      el.addEventListener('ended', onEnded);
+
+      cleanup.push(
+        () => el.removeEventListener('timeupdate', onTimeUpdate),
+        () => el.removeEventListener('play', onPlay),
+        () => el.removeEventListener('pause', onPause),
+        () => el.removeEventListener('loadedmetadata', onMeta),
+        () => el.removeEventListener('volumechange', onVolume),
+        () => el.removeEventListener('ended', onEnded),
+      );
+
+      // Sync initial state if element already had audio loaded
+      setState(prev => ({
+        ...prev,
+        isPlaying: !el.paused,
+        currentTime: el.currentTime,
+        duration: el.duration || prev.duration,
+        volume: el.volume,
+      }));
     }
 
-    const id = window.setInterval(() => {
-      const el = getAudioElement();
-      if (el) {
-        clearInterval(id);
-        el.addEventListener('ended', handleEnded);
-      }
-    }, 200);
-    return () => clearInterval(id);
-  }, [pollState]);
+    const el = getAudioElement();
+    if (el) {
+      attach(el);
+    } else {
+      const id = window.setInterval(() => {
+        const found = getAudioElement();
+        if (found) {
+          clearInterval(id);
+          attach(found);
+        }
+      }, 200);
+      cleanup.push(() => clearInterval(id));
+    }
 
+    return () => cleanup.forEach(fn => fn());
+  }, []);
+
+  // Refresh audio URL only while playing
   useEffect(() => {
-    const id = window.setInterval(() => {
-      const ca = state.currentAudio;
-      if (ca) refreshAudioUrl(ca.bvid, ca.cid);
-    }, 60000);
-    return () => clearInterval(id);
-  }, [state.currentAudio]);
+    const clearTimer = () => {
+      if (refreshTimerRef.current !== null) {
+        clearInterval(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+
+    if (state.isPlaying && state.currentAudio) {
+      clearTimer();
+      refreshTimerRef.current = window.setInterval(() => {
+        const ca = currentAudioRef.current;
+        if (ca) refreshAudioUrl(ca.bvid, ca.cid);
+      }, 60000);
+    } else {
+      clearTimer();
+    }
+
+    return clearTimer;
+  }, [state.isPlaying, state.currentAudio]);
 
   const playPause = useCallback(async () => {
     if (state.isPlaying) pauseAudioLocal();
     else resumeAudioLocal();
-    setTimeout(pollState, 100);
-  }, [state.isPlaying, pollState]);
+  }, [state.isPlaying]);
 
   const playTrack = useCallback(async (track: Track) => {
     const result = await playAudioLocal(track.bvid, track.cid, track.title);
     if (result.success) {
-      setState((prev) => ({
-        ...prev,
-        currentAudio: { bvid: track.bvid, cid: track.cid, title: track.title, author: track.author, cover: track.cover },
+      setState(prev => ({
         isPlaying: true,
+        currentTime: 0,
+        duration: prev.duration || 0,
+        volume: state.volume,
+        currentAudio: { bvid: track.bvid, cid: track.cid, title: track.title, author: track.author, cover: track.cover },
       }));
     }
-    setTimeout(pollState, 100);
-  }, [pollState]);
+  }, [state.volume]);
 
   const seek = useCallback(async (time: number) => {
     seekAudioLocal(time);
-    setTimeout(pollState, 50);
-  }, [pollState]);
+  }, []);
 
   const volumeChange = useCallback(async (v: number) => {
     setVolumeLocal(v);
-    setState((prev) => ({ ...prev, volume: v }));
   }, []);
 
   const syncVolume = useCallback((v: number) => {

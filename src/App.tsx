@@ -1,11 +1,18 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { usePlayerStore } from './hooks/usePlayerStore';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 import FloatingPlayer from '@/components/floating-player/FloatingPlayer';
 import type { Track } from '@/types';
+import { pauseAudioLocal } from './services/api';
 
 function App() {
   const store = usePlayerStore();
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const showNotification = useCallback((msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  }, []);
 
   const handleNext = () => {
     if (store.tracks.length === 0) return null;
@@ -81,8 +88,40 @@ function App() {
         if (!bvidMatch) throw new Error('无效的BV号或链接');
         await store.loadVideo(bvidMatch[0]);
       }
-    } catch (e) { console.error('加载失败:', e); }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '加载失败';
+      showNotification(`加载失败：${msg}`);
+    }
   };
+
+  const handleClearPlaylist = useCallback(() => {
+    store.setTracks([]);
+    store.setCurrentIndex(0);
+    pauseAudioLocal();
+    showNotification('播放列表已清空');
+  }, [store, showNotification]);
+
+  const handleReorderTracks = useCallback((fromIndex: number, toIndex: number) => {
+    store.reorderTracks(fromIndex, toIndex);
+  }, [store]);
+
+  const handleDeleteTrack = useCallback((index: number) => {
+    const total = store.tracks.length;
+    const wasCurrent = index === store.currentIndex;
+    const wasPlaying = wasCurrent && playerState.isPlaying;
+
+    if (wasPlaying && total > 1) {
+      // Compute next track before deletion (React batches state updates)
+      const remaining = store.tracks.filter((_, i) => i !== index);
+      const nextIdx = index >= remaining.length ? remaining.length - 1 : index;
+      const nextTrack = remaining[nextIdx];
+      store.deleteTrack(index);
+      if (nextTrack) playTrack(nextTrack);
+    } else {
+      store.deleteTrack(index);
+      if (wasPlaying) pauseAudioLocal();
+    }
+  }, [store.tracks, store.currentIndex, playerState.isPlaying, store.deleteTrack, playTrack]);
 
   const handleNextButton = async () => {
     const nextIndex = handleNext();
@@ -101,6 +140,18 @@ function App() {
   const handleCreateFavorite = (name: string) => {
     store.setFavorites([...store.favorites, { id: Date.now().toString(), name, icon: '🎵', tracks: [], updatedAt: Date.now() }]);
   };
+
+  const handleRemoveFromFavorite = useCallback((favId: string, trackIndex: number) => {
+    store.removeTrackFromFavorite(favId, trackIndex);
+  }, [store]);
+
+  const handleDeleteFavorite = useCallback((favId: string) => {
+    store.deleteFavorite(favId);
+  }, [store]);
+
+  const handleReorderFavTracks = useCallback((favId: string, fromIndex: number, toIndex: number) => {
+    store.reorderFavoriteTracks(favId, fromIndex, toIndex);
+  }, [store]);
 
   const handleToggleFavorite = useCallback((track: Track) => {
     // Check if already in any fav folder
@@ -141,37 +192,40 @@ function App() {
   return (
     <FloatingPlayer
       storage={{
-        volume: store.volume,
-        playMode: store.playMode,
-        tracks: store.tracks,
-        currentIndex: store.currentIndex,
         windowPosition: store.windowPosition,
         windowSize: store.windowSize,
         favorites: store.favorites,
         recentTracks: store.recentTracks,
-        setVolume: store.setVolume,
-        setPlayMode: store.setPlayMode,
-        setTracks: store.setTracks,
-        setCurrentIndex: store.setCurrentIndex,
         setWindowPosition: store.setWindowPosition,
         setWindowSize: store.setWindowSize,
       }}
-      playerState={{ ...playerState, currentAudio: store.tracks[store.currentIndex] || null }}
+      playerState={playerState}
       playlistState={{ tracks: store.tracks, currentIndex: store.currentIndex, playMode: store.playMode }}
-      onPlayPause={handlePlayPause}
-      onPlayTrack={handlePlayTrack}
-      onPrev={handlePrevButton}
-      onNext={handleNextButton}
-      onSeek={seek}
-      onVolumeChange={volumeChange}
-      onDeleteTrack={store.deleteTrack}
-      onMoveTrackUp={store.moveTrackUp}
-      onPlayModeChange={store.setPlayMode}
+      playerActions={{
+        onPlayPause: handlePlayPause,
+        onPrev: handlePrevButton,
+        onNext: handleNextButton,
+        onSeek: seek,
+        onVolumeChange: volumeChange,
+        onPlayModeChange: store.setPlayMode,
+      }}
+      playlistActions={{
+        onPlayTrack: handlePlayTrack,
+        onDeleteTrack: handleDeleteTrack,
+        onClearPlaylist: handleClearPlaylist,
+        onReorderTracks: handleReorderTracks,
+      }}
+      favoriteActions={{
+        onCreateFavorite: handleCreateFavorite,
+        onToggleFavorite: handleToggleFavorite,
+        onPlayFromFavorite: handlePlayFromFavorite,
+        onRemoveFromFavorite: handleRemoveFromFavorite,
+        onDeleteFavorite: handleDeleteFavorite,
+        onReorderFavTracks: handleReorderFavTracks,
+      }}
       onInputSubmit={handleInputSubmit}
       loading={store.loading}
-      onCreateFavorite={handleCreateFavorite}
-      onToggleFavorite={handleToggleFavorite}
-      onPlayFromFavorite={handlePlayFromFavorite}
+      notification={notification}
     />
   );
 }
