@@ -64,6 +64,7 @@ export default function FloatingPlayer({
   notification,
 }: FloatingPlayerProps) {
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
+  const [animating, setAnimating] = useState<'expand' | 'collapse' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const didDrag = useRef(false);
   const dragSession = useRef<{
@@ -220,22 +221,30 @@ export default function FloatingPlayer({
     }
     const api = window.electronAPI;
     if (collapsedState === 'collapsed') {
-      // Capture current position, then expand centered on thumb
       const pos = await api.windowGetPosition();
       collapsedPosRef.current = { x: pos.x, y: pos.y };
       const thumbCenterX = pos.x + THUMB_WIDTH / 2;
-      const expandedX = thumbCenterX - storage.windowSize.width / 2;
-      api.windowMove(expandedX, pos.y);
-      api.windowResize(storage.windowSize.width, storage.windowSize.height);
+      const targetW = Math.min(storage.windowSize.width, window.screen.width - 40);
+      const targetH = Math.min(storage.windowSize.height, window.screen.height - 40);
+      let expandedX = thumbCenterX - targetW / 2;
+      let expandedY = pos.y;
+      expandedX = Math.max(20, Math.min(expandedX, window.screen.width - targetW - 20));
+      expandedY = Math.max(20, Math.min(expandedY, window.screen.height - targetH - 20));
+      setAnimating('expand');
+      api.windowMove(expandedX, expandedY);
+      api.windowResize(targetW, targetH);
       api.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
       setCollapsedState('expanded');
     } else {
-      // Collapse back to saved position
       const pos = collapsedPosRef.current;
       if (pos) api.windowMove(pos.x, pos.y);
       api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
       api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
-      setCollapsedState('collapsed');
+      setAnimating('collapse');
+      setTimeout(() => {
+        setCollapsedState('collapsed');
+        setAnimating(null);
+      }, 200);
     }
   }, [collapsedState, storage.windowSize]);
 
@@ -251,7 +260,12 @@ export default function FloatingPlayer({
   return (
     <div
       ref={containerRef}
-      className={`float-player${collapsedState === 'expanded' ? ' expanded' : ''}${playerState.isPlaying ? ' playing' : ''}`}
+      className={[
+        'float-player',
+        collapsedState === 'expanded' && 'expanded',
+        collapsedState === 'collapsed' && animating === 'collapse' && 'collapsing',
+        playerState.isPlaying && 'playing',
+      ].filter(Boolean).join(' ')}
       onMouseDown={handleMouseDown}
     >
       {collapsedState !== 'expanded' && (
@@ -283,7 +297,7 @@ export default function FloatingPlayer({
       )}
 
       {collapsedState === 'expanded' && (
-        <>
+        <div style={{ pointerEvents: animating === 'expand' ? 'none' : 'auto' }}>
           <ExpandedPanel
             currentAudio={playerState.currentAudio}
             currentTime={playerState.currentTime}
@@ -307,7 +321,7 @@ export default function FloatingPlayer({
           <div className="resize-handle resize-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />
           <div className="resize-handle resize-se" onMouseDown={(e) => handleResizeStart(e, 'se')} />
           <div className="resize-handle resize-s" onMouseDown={(e) => handleResizeStart(e, 's')} />
-        </>
+        </div>
       )}
     </div>
   );
