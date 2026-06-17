@@ -88,6 +88,13 @@ export default function FloatingPlayer({
     height: 600,
   });
 
+  // Clear expand animation after 250ms
+  useEffect(() => {
+    if (animating !== 'expand') return;
+    const timer = setTimeout(() => setAnimating(null), 250);
+    return () => clearTimeout(timer);
+  }, [animating]);
+
   // Sync window size when user drags resize handles (only when expanded)
   useEffect(() => {
     if (collapsedState !== 'expanded') return;
