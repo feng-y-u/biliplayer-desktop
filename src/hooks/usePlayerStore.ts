@@ -130,6 +130,7 @@ export function usePlayerStore() {
       if (!res.success) throw new Error(res.error);
       const track = res.data as unknown as Track;
       setTracksState((prev) => {
+        if (prev.some(t => t.bvid === track.bvid)) return prev;
         const next = [...prev, track];
         persistPlaylist(next, currentIndexRef.current);
         return next;
@@ -147,7 +148,9 @@ export function usePlayerStore() {
       if (!res.success) throw new Error(res.error);
       const data = res.data as unknown as Track[];
       setTracksState((prev) => {
-        const next = [...prev, ...data];
+        const existing = new Set(prev.map(t => t.bvid));
+        const newTracks = data.filter(t => !existing.has(t.bvid));
+        const next = [...prev, ...newTracks];
         persistPlaylist(next, currentIndexRef.current);
         return next;
       });
