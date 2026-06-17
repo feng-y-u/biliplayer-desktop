@@ -228,7 +228,7 @@ export default function ExpandedPanel({
         )}
 
         {activeTab === 'recent' && (
-          <RecentTab recentTracks={recentTracks} currentAudio={currentAudio} tracks={tracks} onPlayTrack={onPlayTrack} />
+          <RecentTab recentTracks={recentTracks} currentAudio={currentAudio} onPlayTrack={onPlayFromFavorite} />
         )}
       </div>
     </div>

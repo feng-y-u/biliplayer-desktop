@@ -3,22 +3,17 @@ import type { Track } from '@/types';
 interface RecentTabProps {
   recentTracks: Track[];
   currentAudio?: Track | null;
-  tracks: Track[];
-  onPlayTrack: (index: number) => void;
+  onPlayTrack: (track: Track) => void;
 }
 
-export default function RecentTab({ recentTracks, currentAudio, tracks, onPlayTrack }: RecentTabProps) {
+export default function RecentTab({ recentTracks, currentAudio, onPlayTrack }: RecentTabProps) {
   return (
     <div className="ep-recent-list">
       {recentTracks.length > 0 ? recentTracks.map((track, i) => (
         <div
           className={`ep-recent-item ${track.bvid === currentAudio?.bvid && track.cid === currentAudio?.cid ? 'active' : ''}`}
           key={`${track.bvid}-${track.cid}-${i}`}
-          onClick={() => {
-            const plIndex = tracks.findIndex(t => t.bvid === track.bvid && t.cid === track.cid);
-            if (plIndex >= 0) onPlayTrack(plIndex);
-          }}
-        >
+          onClick={() => onPlayTrack(track)}>
           <div className="ep-recent-dot" />
           <div className="ep-recent-info">
             <div className="ep-recent-title">{track.title}</div>
