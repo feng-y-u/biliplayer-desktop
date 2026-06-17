@@ -31,22 +31,54 @@
 }
 .ep-vol-slider {
   width: 60px;
-  height: 3px;
+  height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: var(--border);
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--vol-pct, 100%),
+    var(--border) var(--vol-pct, 100%)
+  );
   border-radius: 2px;
   cursor: pointer;
   flex-shrink: 0;
+  outline: none;
 }
 .ep-vol-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid white;
   box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.ep-vol-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+.ep-vol-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.ep-vol-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+.ep-vol-slider::-moz-range-progress {
+  background: var(--accent);
+  border-radius: 2px;
+}
+.ep-vol-slider::-moz-range-track {
+  background: var(--border);
+  border-radius: 2px;
+  height: 4px;
 }
 
 .ep-ctrl-center {
@@ -149,16 +181,41 @@
   background: transparent;
   cursor: pointer;
   margin: 0;
+  outline: none;
 }
 .ep-prog-bar input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid white;
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
   cursor: pointer;
+  transition: transform 0.12s;
+}
+.ep-prog-bar input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+.ep-prog-bar input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.ep-prog-bar input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+.ep-prog-bar input[type="range"]::-moz-range-progress {
+  background: var(--accent);
+  border-radius: 2px;
+}
+.ep-prog-bar input[type="range"]::-moz-range-track {
+  background: transparent;
 }
 .ep-times {
   display: flex;

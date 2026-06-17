@@ -169,6 +169,7 @@ export default function ExpandedPanel({
           </svg>
         </button>
         <input className="ep-vol-slider" type="range" min={0} max={1} step={0.01} value={volume}
+          style={{ '--vol-pct': `${volume * 100}%` } as React.CSSProperties}
           onChange={(e) => playerActions.onVolumeChange(parseFloat(e.target.value))}
         />
       </div>
