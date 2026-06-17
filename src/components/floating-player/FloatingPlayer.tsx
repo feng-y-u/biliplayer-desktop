@@ -42,6 +42,8 @@ interface FloatingPlayerProps {
     onRemoveFromFavorite: (favId: string, trackIndex: number) => void;
     onDeleteFavorite: (favId: string) => void;
     onReorderFavTracks: (favId: string, fromIndex: number, toIndex: number) => void;
+    onAddToFavorite?: (favId: string, track: Track) => void;
+    onAddToFavoriteFromInput?: (favId: string, input: string) => Promise<void>;
   };
   onInputSubmit: (input: string) => void;
   loading: boolean;
@@ -77,19 +79,14 @@ export default function FloatingPlayer({
     startH: number;
     edge: 'e' | 'se' | 's';
   } | null>(null);
+  const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Resize window: expanded vs collapsed
+  // Sync window size when user drags resize handles (only when expanded)
   useEffect(() => {
-    if (isFirstRender.current) return;
-    const api = window.electronAPI;
-    if (collapsedState === 'expanded') {
-      api.windowResize(storage.windowSize.width, storage.windowSize.height);
-      api.windowSetMinimumSize(EXPANDED_MIN_W, EXPANDED_MIN_H);
-    } else {
-      api.windowResize(COLLAPSED_W, COLLAPSED_H);
-      api.windowSetMinimumSize(1, 1); // remove minimum size constraint
-    }
-  }, [collapsedState, storage.windowSize.width, storage.windowSize.height]);
+    if (collapsedState !== 'expanded') return;
+    window.electronAPI.windowResize(storage.windowSize.width, storage.windowSize.height);
+    window.electronAPI.windowSetMinimumSize(EXPANDED_MIN_W, EXPANDED_MIN_H);
+  }, [storage.windowSize, collapsedState]);
 
   // Set initial window size (collapsed) and restore saved position on mount
   useEffect(() => {
@@ -216,15 +213,38 @@ export default function FloatingPlayer({
     document.body.style.userSelect = 'none';
   }, [storage.windowSize]);
 
-  const handleThumbClick = useCallback(() => {
+  const handleThumbClick = useCallback(async () => {
     if (didDrag.current) {
       didDrag.current = false;
       return;
     }
-    setCollapsedState((prev) => (prev === 'expanded' ? 'collapsed' : 'expanded'));
-  }, []);
+    const api = window.electronAPI;
+    if (collapsedState === 'collapsed') {
+      // Capture current position, then expand centered on thumb
+      const pos = await api.windowGetPosition();
+      collapsedPosRef.current = { x: pos.x, y: pos.y };
+      const thumbCenterX = pos.x + COLLAPSED_W / 2;
+      const expandedX = thumbCenterX - storage.windowSize.width / 2;
+      api.windowMove(expandedX, pos.y);
+      api.windowResize(storage.windowSize.width, storage.windowSize.height);
+      api.windowSetMinimumSize(EXPANDED_MIN_W, EXPANDED_MIN_H);
+      setCollapsedState('expanded');
+    } else {
+      // Collapse back to saved position
+      const pos = collapsedPosRef.current;
+      if (pos) api.windowMove(pos.x, pos.y);
+      api.windowResize(COLLAPSED_W, COLLAPSED_H);
+      api.windowSetMinimumSize(1, 1);
+      setCollapsedState('collapsed');
+    }
+  }, [collapsedState, storage.windowSize]);
 
   const handleClose = useCallback(() => {
+    const api = window.electronAPI;
+    const pos = collapsedPosRef.current;
+    if (pos) api.windowMove(pos.x, pos.y);
+    api.windowResize(COLLAPSED_W, COLLAPSED_H);
+    api.windowSetMinimumSize(1, 1);
     setCollapsedState('collapsed');
   }, []);
 
