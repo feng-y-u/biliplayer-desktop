@@ -4,11 +4,13 @@ import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
 import './FloatingPlayer.css';
 import type { CollapsedState, PlayerState, PlaylistState, PlayMode, WindowPosition, WindowSize, Track, FavoriteFolder } from '@/types';
 
-// Sizes: collapsed is just the circle; hovered = circle + hover-bar; expanded = full panel
-const COLLAPSED_W = 200;
-const COLLAPSED_H = 72;
-const EXPANDED_MIN_W = 320;
-const EXPANDED_MIN_H = 480;
+// Window size constants
+const THUMB_WIDTH = 200;
+const THUMB_HEIGHT = 72;
+const PANEL_MIN_WIDTH = 320;
+const PANEL_MIN_HEIGHT = 480;
+const DRAG_THRESHOLD = 5;
+const MIN_WINDOW_SIZE = { width: 1, height: 1 };
 
 interface FloatingPlayerProps {
   storage: {
@@ -64,7 +66,6 @@ export default function FloatingPlayer({
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const containerRef = useRef<HTMLDivElement>(null);
   const didDrag = useRef(false);
-  const isFirstRender = useRef(true);
   const dragSession = useRef<{
     startScreenX: number;
     startScreenY: number;
@@ -85,15 +86,14 @@ export default function FloatingPlayer({
   useEffect(() => {
     if (collapsedState !== 'expanded') return;
     window.electronAPI.windowResize(storage.windowSize.width, storage.windowSize.height);
-    window.electronAPI.windowSetMinimumSize(EXPANDED_MIN_W, EXPANDED_MIN_H);
+    window.electronAPI.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
   }, [storage.windowSize, collapsedState]);
 
   // Set initial window size (collapsed) and restore saved position on mount
   useEffect(() => {
     (async () => {
-      isFirstRender.current = false;
       const api = window.electronAPI;
-      await api.windowResize(COLLAPSED_W, COLLAPSED_H);
+      await api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
       const pos = await api.windowGetPosition();
       const wp = storage.windowPosition;
       if (wp.left !== 0 || wp.top !== 0) {
@@ -106,31 +106,31 @@ export default function FloatingPlayer({
 
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
-      const s = dragSession.current;
-      if (!s) return;
+      const drag = dragSession.current;
+      if (!drag) return;
 
-      const dx = e.screenX - s.startScreenX;
-      const dy = e.screenY - s.startScreenY;
+      const dx = e.screenX - drag.startScreenX;
+      const dy = e.screenY - drag.startScreenY;
 
-      if (!s.dragging) {
-        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
-        s.dragging = true;
+      if (!drag.dragging) {
+        if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+        drag.dragging = true;
         didDrag.current = true;
         document.body.style.cursor = 'grabbing';
         document.body.style.userSelect = 'none';
       }
 
-      window.electronAPI.windowMove(s.startWinX + dx, s.startWinY + dy);
+      window.electronAPI.windowMove(drag.startWinX + dx, drag.startWinY + dy);
     }
 
     function onMouseUp() {
-      const s = dragSession.current;
-      if (!s) return;
+      const drag = dragSession.current;
+      if (!drag) return;
       dragSession.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
 
-      if (s.dragging) {
+      if (drag.dragging) {
         (async () => {
           const pos = await window.electronAPI.windowGetPosition();
           storage.setWindowPosition({ left: pos.x, top: pos.y });
@@ -149,19 +149,19 @@ export default function FloatingPlayer({
   // Resize handling
   useEffect(() => {
     function onResizeMove(e: MouseEvent) {
-      const rs = resizeSession.current;
-      if (!rs) return;
+      const resize = resizeSession.current;
+      if (!resize) return;
 
-      const dx = e.screenX - rs.startScreenX;
-      const dy = e.screenY - rs.startScreenY;
+      const dx = e.screenX - resize.startScreenX;
+      const dy = e.screenY - resize.startScreenY;
 
-      let newW = rs.startW;
-      let newH = rs.startH;
-      if (rs.edge === 'e' || rs.edge === 'se') {
-        newW = Math.max(EXPANDED_MIN_W, rs.startW + dx);
+      let newW = resize.startW;
+      let newH = resize.startH;
+      if (resize.edge === 'e' || resize.edge === 'se') {
+        newW = Math.max(PANEL_MIN_WIDTH, resize.startW + dx);
       }
-      if (rs.edge === 's' || rs.edge === 'se') {
-        newH = Math.max(EXPANDED_MIN_H, rs.startH + dy);
+      if (resize.edge === 's' || resize.edge === 'se') {
+        newH = Math.max(PANEL_MIN_HEIGHT, resize.startH + dy);
       }
 
       const newSize = { width: newW, height: newH };
@@ -223,18 +223,18 @@ export default function FloatingPlayer({
       // Capture current position, then expand centered on thumb
       const pos = await api.windowGetPosition();
       collapsedPosRef.current = { x: pos.x, y: pos.y };
-      const thumbCenterX = pos.x + COLLAPSED_W / 2;
+      const thumbCenterX = pos.x + THUMB_WIDTH / 2;
       const expandedX = thumbCenterX - storage.windowSize.width / 2;
       api.windowMove(expandedX, pos.y);
       api.windowResize(storage.windowSize.width, storage.windowSize.height);
-      api.windowSetMinimumSize(EXPANDED_MIN_W, EXPANDED_MIN_H);
+      api.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
       setCollapsedState('expanded');
     } else {
       // Collapse back to saved position
       const pos = collapsedPosRef.current;
       if (pos) api.windowMove(pos.x, pos.y);
-      api.windowResize(COLLAPSED_W, COLLAPSED_H);
-      api.windowSetMinimumSize(1, 1);
+      api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
+      api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
       setCollapsedState('collapsed');
     }
   }, [collapsedState, storage.windowSize]);
@@ -243,8 +243,8 @@ export default function FloatingPlayer({
     const api = window.electronAPI;
     const pos = collapsedPosRef.current;
     if (pos) api.windowMove(pos.x, pos.y);
-    api.windowResize(COLLAPSED_W, COLLAPSED_H);
-    api.windowSetMinimumSize(1, 1);
+    api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
+    api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
     setCollapsedState('collapsed');
   }, []);
 

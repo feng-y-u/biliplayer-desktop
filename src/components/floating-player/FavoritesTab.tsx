@@ -1,6 +1,16 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Track, FavoriteFolder } from '@/types';
 
+const FAV_ICON_SIZE = 80;
+
+function getFavIconStyle(fav: FavoriteFolder): React.CSSProperties {
+  const cover = fav.tracks[0]?.cover;
+  if (cover) {
+    return { backgroundImage: `url(${cover}@${FAV_ICON_SIZE}w_${FAV_ICON_SIZE}h.jpg)`, backgroundSize: 'cover', backgroundPosition: 'center' };
+  }
+  return { background: fav.icon.length <= 2 ? 'var(--accent)' : fav.icon };
+}
+
 interface FavoritesTabProps {
   favorites: FavoriteFolder[];
   onCreateFavorite: (name: string) => void;
@@ -8,10 +18,13 @@ interface FavoritesTabProps {
   onRemoveTrack?: (favId: string, trackIndex: number) => void;
   onDeleteFavorite?: (favId: string) => void;
   onReorderTracks?: (favId: string, fromIndex: number, toIndex: number) => void;
+  onAddToFavoriteFromInput?: (favId: string, input: string) => Promise<void>;
 }
 
-export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack, onRemoveTrack, onDeleteFavorite, onReorderTracks }: FavoritesTabProps) {
+export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack, onRemoveTrack, onDeleteFavorite, onReorderTracks, onAddToFavoriteFromInput }: FavoritesTabProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState('');
+  const [addingToFavId, setAddingToFavId] = useState<string | null>(null);
   const dragItem = useRef<{ favId: string; index: number } | null>(null);
 
   // Clean up expandedId if the expanded folder no longer exists
@@ -73,7 +86,7 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
           {favorites.map(fav => (
             <div className={`ep-fav-card ep-fav-card-expand${expandedId === fav.id ? ' expanded' : ''}`} key={fav.id}>
               <div className="ep-fav-header" onClick={() => toggleExpand(fav.id)}>
-                <div className="ep-fav-icon" style={fav.tracks[0]?.cover ? { backgroundImage: `url(${fav.tracks[0].cover}@80w_80h.jpg)`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: fav.icon.length <= 2 ? 'var(--accent)' : fav.icon }}>
+                <div className="ep-fav-icon" style={getFavIconStyle(fav)}>
                   {fav.tracks[0]?.cover ? null : (fav.icon.length <= 2 ? fav.icon : '♪')}
                 </div>
                 <div className="ep-fav-info">
@@ -91,6 +104,15 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
               )}
               {expandedId === fav.id && (
                 <div className="ep-fav-tracks">
+                  {onAddToFavoriteFromInput && (
+                    <div className="ep-fav-input-row" onClick={(e) => e.stopPropagation()}>
+                      <input type="text" placeholder="BV 号或收藏夹链接" value={addingToFavId === fav.id ? inputValue : ''}
+                        onChange={(e) => { setAddingToFavId(fav.id); setInputValue(e.target.value); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && inputValue.trim()) { onAddToFavoriteFromInput(fav.id, inputValue.trim()); setInputValue(''); } }}
+                      />
+                      <button onClick={() => { if (inputValue.trim()) { onAddToFavoriteFromInput(fav.id, inputValue.trim()); setInputValue(''); } }}>添加</button>
+                    </div>
+                  )}
                   {fav.tracks.length > 0 ? fav.tracks.map((track, ti) => (
                     <div className="ep-fav-track" key={`${track.bvid}-${track.cid}`}
                       draggable={!!onReorderTracks}

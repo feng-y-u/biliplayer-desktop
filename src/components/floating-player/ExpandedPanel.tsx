@@ -7,6 +7,7 @@ import FavoritesTab from './FavoritesTab';
 import RecentTab from './RecentTab';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
 import type { Track, PlayMode, FavoriteFolder, CurrentAudio } from '@/types';
+import { formatDuration } from '@/utils/format';
 
 interface ExpandedPanelProps {
   currentAudio?: CurrentAudio | null;
@@ -40,6 +41,8 @@ interface ExpandedPanelProps {
     onRemoveFromFavorite: (favId: string, trackIndex: number) => void;
     onDeleteFavorite: (favId: string) => void;
     onReorderFavTracks: (favId: string, fromIndex: number, toIndex: number) => void;
+    onAddToFavorite?: (favId: string, track: Track) => void;
+    onAddToFavoriteFromInput?: (favId: string, input: string) => Promise<void>;
   };
   onClose: () => void;
   onInputSubmit: (input: string) => void;
@@ -76,13 +79,6 @@ export default function ExpandedPanel({
     if (volume > 0) prevVolume.current = volume;
   }, [volume]);
 
-  const formatTime = (s: number) => {
-    if (!s || !isFinite(s)) return '0:00';
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
-
   const rawProg = duration ? (currentTime / duration) * 100 : 0;
   const progValue = seekingValue ?? rawProg;
 
@@ -111,14 +107,15 @@ export default function ExpandedPanel({
 
       {currentAudio && (
         <div className="ep-now-playing">
-          <div className="ep-np-cover">
-            {currentAudio.cover ? (
-              <img src={currentAudio.cover} alt="" />
-            ) : (
-              <span>♪</span>
-            )}
-          </div>
-          <div className="ep-np-info">
+          <div className="ep-np-bg" style={{ backgroundImage: `url(${currentAudio.cover})` }} />
+          <div className="ep-np-content">
+            <div className="ep-np-cover">
+              {currentAudio.cover ? (
+                <img src={currentAudio.cover} alt="" />
+              ) : (
+                <span>♪</span>
+              )}
+            </div>
             <div className="ep-np-title" title={currentAudio.title}>{currentAudio.title}</div>
             <div className="ep-np-artist">{currentAudio.author}</div>
           </div>
@@ -186,8 +183,8 @@ export default function ExpandedPanel({
           />
         </div>
         <div className="ep-times">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
+          <span>{formatDuration(currentTime)}</span>
+          <span>{formatDuration(duration)}</span>
         </div>
       </div>
 
@@ -226,6 +223,7 @@ export default function ExpandedPanel({
             onPlayTrack={playlistActions.onPlayTrack}
             onDeleteTrack={playlistActions.onDeleteTrack}
             onToggleFavorite={favoriteActions.onToggleFavorite}
+            onAddToFavorite={favoriteActions.onAddToFavorite}
             onReorderTracks={playlistActions.onReorderTracks}
           />
         )}
@@ -233,7 +231,8 @@ export default function ExpandedPanel({
         {activeTab === 'favs' && (
           <FavoritesTab favorites={favorites} onCreateFavorite={favoriteActions.onCreateFavorite}
             onPlayTrack={favoriteActions.onPlayFromFavorite} onRemoveTrack={favoriteActions.onRemoveFromFavorite}
-            onDeleteFavorite={favoriteActions.onDeleteFavorite} onReorderTracks={favoriteActions.onReorderFavTracks} />
+            onDeleteFavorite={favoriteActions.onDeleteFavorite} onReorderTracks={favoriteActions.onReorderFavTracks}
+            onAddToFavoriteFromInput={favoriteActions.onAddToFavoriteFromInput} />
         )}
 
         {activeTab === 'recent' && (

@@ -3,6 +3,8 @@ import type { Track, FavoriteFolder, PlayMode, WindowPosition, WindowSize } from
 import { getVideoInfo, getPlaylist } from '../services/api';
 
 const store = window.electronAPI!;
+const BATCH_FLUSH_DELAY_MS = 100;
+const DEFAULT_WINDOW_SIZE: WindowSize = { width: 400, height: 600 };
 
 /** Debounced batch writer: coalesces rapid store:set calls into one IPC flush. */
 function useBatchStore() {
@@ -22,7 +24,7 @@ function useBatchStore() {
   const batchSet = useCallback((key: string, value: any) => {
     batchRef.current[key] = value;
     if (!timerRef.current) {
-      timerRef.current = setTimeout(flush, 100);
+      timerRef.current = setTimeout(flush, BATCH_FLUSH_DELAY_MS);
     }
   }, [flush]);
 
@@ -45,7 +47,7 @@ export function usePlayerStore() {
   const [favorites, setFavoritesState] = useState<FavoriteFolder[]>([]);
   const [recentTracks, setRecentTracksState] = useState<Track[]>([]);
   const [windowPosition, setWindowPositionState] = useState<WindowPosition>({ left: 0, top: 0 });
-  const [windowSize, setWindowSizeState] = useState<WindowSize>({ width: 400, height: 600 });
+  const [windowSize, setWindowSizeState] = useState<WindowSize>(DEFAULT_WINDOW_SIZE);
   const [loading, setLoading] = useState(false);
 
   const tracksRef = useRef(tracks);

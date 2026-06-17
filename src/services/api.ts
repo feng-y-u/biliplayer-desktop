@@ -14,8 +14,11 @@ declare global {
 
 const api = window.electronAPI?.api;
 
+const DEFAULT_VOLUME = 0.7;
+const URL_REFRESH_THRESHOLD_MS = 60_000;
+
 let audioEl: HTMLAudioElement | null = new Audio();
-audioEl.volume = 0.7;
+audioEl.volume = DEFAULT_VOLUME;
 let currentUrl = '';
 let currentExpiresAt = 0;
 let currentBvid = '';
@@ -24,7 +27,7 @@ let currentCid = 0;
 function ensureAudio(): HTMLAudioElement {
   if (!audioEl) {
     audioEl = new Audio();
-    audioEl.volume = 0.7;
+    audioEl.volume = DEFAULT_VOLUME;
   }
   return audioEl;
 }
@@ -44,7 +47,7 @@ export async function getAudioUrl(bvid: string, cid: number) {
 /** Preload audio URL into the global player cache without playing. */
 export async function loadAudioTrack(bvid: string, cid: number): Promise<{ url: string; expiresAt: number } | null> {
   try {
-    if (bvid === currentBvid && cid === currentCid && currentUrl && currentExpiresAt > Date.now() + 60_000) {
+    if (bvid === currentBvid && cid === currentCid && currentUrl && currentExpiresAt > Date.now() + URL_REFRESH_THRESHOLD_MS) {
       return { url: currentUrl, expiresAt: currentExpiresAt };
     }
     const res = await getAudioUrl(bvid, cid);
@@ -79,15 +82,6 @@ export function setVolumeLocal(volume: number) { if (audioEl) audioEl.volume = v
 
 export function getAudioElement(): HTMLAudioElement | null {
   return audioEl;
-}
-
-export function getLocalPlayerState() {
-  return {
-    isPlaying: audioEl ? !audioEl.paused : false,
-    currentTime: audioEl ? audioEl.currentTime : 0,
-    duration: audioEl ? audioEl.duration : 0,
-    volume: audioEl ? audioEl.volume : 0.7,
-  };
 }
 
 export async function refreshAudioUrl(bvid: string, cid: number) {

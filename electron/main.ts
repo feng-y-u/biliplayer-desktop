@@ -7,6 +7,14 @@ import Store from 'electron-store';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const THUMB_WIDTH = 200;
+const THUMB_HEIGHT = 72;
+const WINDOW_OFFSET = 40;
+const PLAYLIST_PAGE_SIZE = 20;
+const AUDIO_URL_EXPIRY_MS = 10 * 60 * 1000;
+const BILIBILI_CDN_URLS = ['*://*.hdslb.com/*', '*://*.bilivideo.com/*', '*://*.bilibili.com/*'];
+const DEFAULT_WINDOW_SIZE = { width: 320, height: 480 };
+
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-gpu-cache');
 
@@ -24,20 +32,16 @@ const store = new Store<{
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
-  // Always start at collapsed size; the renderer resizes on expand
-  const COLLAPSED_W = 200;
-  const COLLAPSED_H = 72;
-
   const display = screen.getPrimaryDisplay();
   const { width: screenW, height: screenH } = display.workAreaSize;
   const { x: workX, y: workY } = display.workArea;
 
-  let winX = workX + screenW - COLLAPSED_W - 40;
-  let winY = workY + screenH - COLLAPSED_H - 40;
+  let winX = workX + screenW - THUMB_WIDTH - WINDOW_OFFSET;
+  let winY = workY + screenH - THUMB_HEIGHT - WINDOW_OFFSET;
 
   mainWindow = new BrowserWindow({
-    width: COLLAPSED_W,
-    height: COLLAPSED_H,
+    width: THUMB_WIDTH,
+    height: THUMB_HEIGHT,
     x: winX,
     y: winY,
     alwaysOnTop: true,
@@ -57,7 +61,7 @@ function createWindow() {
 
   // Bilibili CDN blocks requests without Referer
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
-    { urls: ['*://*.hdslb.com/*', '*://*.bilivideo.com/*', '*://*.bilibili.com/*'] },
+    { urls: BILIBILI_CDN_URLS },
     (details, callback) => {
       details.requestHeaders['Referer'] = 'https://www.bilibili.com/';
       details.requestHeaders['User-Agent'] = 'Mozilla/5.0';
@@ -115,7 +119,7 @@ async function getVideoInfo(bvid: string) {
   });
   const data = await res.json();
   if (data.code !== 0) throw new Error(data.message);
-  return { bvid: data.data.bvid, cid: data.data.cid, title: data.data.title, author: data.data.owner.name, cover: data.data.pic };
+  return { bvid: data.data.bvid, cid: data.data.cid, title: data.data.title, author: data.data.owner.name, cover: data.data.pic, duration: data.data.duration };
 }
 
 function parsePlaylistUrl(url: string) {
@@ -130,7 +134,7 @@ async function getPlaylistVideos(_mid: string, seasonId: string) {
   const all: any[] = [];
   let pn = 1;
   while (true) {
-    const res = await fetch(`https://api.bilibili.com/x/v3/fav/resource/list?media_id=${seasonId}&pn=${pn}&ps=20`, {
+    const res = await fetch(`https://api.bilibili.com/x/v3/fav/resource/list?media_id=${seasonId}&pn=${pn}&ps=${PLAYLIST_PAGE_SIZE}`, {
       headers: { Referer: 'https://www.bilibili.com/', 'User-Agent': 'Mozilla/5.0' },
     });
     const data = await res.json();
@@ -138,7 +142,7 @@ async function getPlaylistVideos(_mid: string, seasonId: string) {
     const medias = data.data?.list || data.data?.medias || [];
     if (medias.length === 0) break;
     all.push(...medias);
-    if (!data.data?.has_more || medias.length < 20) break;
+    if (!data.data?.has_more || medias.length < PLAYLIST_PAGE_SIZE) break;
     pn++;
   }
   return all.map((item: any) => ({
@@ -161,7 +165,7 @@ async function getAudioUrl(bvid: string, cid: number) {
   if (!audioTrack) throw new Error('No audio track found');
   const audioUrl = audioTrack.baseUrl || audioTrack.base_url;
   if (!audioUrl) throw new Error('No audio URL');
-  return { url: audioUrl, expiresAt: Date.now() + 10 * 60 * 1000 };
+  return { url: audioUrl, expiresAt: Date.now() + AUDIO_URL_EXPIRY_MS };
 }
 
 // ── IPC handlers ──
@@ -200,7 +204,7 @@ ipcMain.handle('window:resize', (_event, width: number, height: number) => {
 });
 
 ipcMain.handle('window:getPosition', () => {
-  if (!mainWindow) return { x: 0, y: 0, width: 320, height: 480 };
+  if (!mainWindow) return { x: 0, y: 0, ...DEFAULT_WINDOW_SIZE };
   const [x, y] = mainWindow.getPosition();
   const [width, height] = mainWindow.getSize();
   return { x, y, width, height };

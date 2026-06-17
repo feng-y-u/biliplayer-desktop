@@ -7,6 +7,8 @@
 }
 .float-player.expanded {
   background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 /* ── Collapsed → expanded scale animation ── */
@@ -88,6 +90,7 @@
   height: 100%;
   background-size: cover;
   background-position: center;
+  will-change: transform;
 }
 .player-thumb .note-icon {
   color: white;
@@ -97,6 +100,9 @@
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+.player-thumb.playing .thumb-inner {
+  animation: spin 8s linear infinite;
 }
 
 .hover-bar {

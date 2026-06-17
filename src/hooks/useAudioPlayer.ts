@@ -10,6 +10,9 @@ import {
   refreshAudioUrl,
 } from '../services/api';
 
+const URL_REFRESH_INTERVAL_MS = 60_000;
+const AUDIO_ELEMENT_POLL_MS = 200;
+
 export function useAudioPlayer(onTrackEnd?: () => void) {
   const [state, setState] = useState<PlayerState>({
     isPlaying: false,
@@ -72,7 +75,7 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
           clearInterval(id);
           attach(found);
         }
-      }, 200);
+      }, AUDIO_ELEMENT_POLL_MS);
       cleanup.push(() => clearInterval(id));
     }
 
@@ -91,9 +94,9 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
     if (state.isPlaying && state.currentAudio) {
       clearTimer();
       refreshTimerRef.current = window.setInterval(() => {
-        const ca = currentAudioRef.current;
-        if (ca) refreshAudioUrl(ca.bvid, ca.cid);
-      }, 60000);
+        const audio = currentAudioRef.current;
+        if (audio) refreshAudioUrl(audio.bvid, audio.cid);
+      }, URL_REFRESH_INTERVAL_MS);
     } else {
       clearTimer();
     }

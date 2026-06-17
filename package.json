@@ -9,6 +9,8 @@
     "dev": "npm run gen:preload --silent && vite",
     "build": "tsc && vite build && npm run gen:preload --silent && node -e \"require('fs').copyFileSync('electron/preload.cjs','dist-electron/preload.js')\"",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepare": "husky"
   },
   "dependencies": {

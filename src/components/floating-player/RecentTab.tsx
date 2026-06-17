@@ -1,4 +1,5 @@
 import type { Track, FavoriteFolder } from '@/types';
+import { isTrackFavorited } from '@/utils/track';
 import './Playlist.css';
 
 interface RecentTabProps {
@@ -7,12 +8,6 @@ interface RecentTabProps {
   favorites: FavoriteFolder[];
   onPlayTrack: (track: Track) => void;
   onToggleFavorite: (track: Track) => void;
-}
-
-function isTrackFavorited(track: Track, favorites: FavoriteFolder[]): boolean {
-  return favorites.some(f =>
-    f.tracks.some(t => t.bvid === track.bvid && t.cid === track.cid)
-  );
 }
 
 export default function RecentTab({ recentTracks, currentAudio, favorites, onPlayTrack, onToggleFavorite }: RecentTabProps) {

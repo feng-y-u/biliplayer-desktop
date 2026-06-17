@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm install                     # first time
-npm run dev                     # Vite dev server + Electron (vite-plugin-electron hot-reloads main)
-npm run build                   # tsc && vite build → dist/ + dist-electron/ + copies preload.cjs
+npm run gen:preload             # compile electron/preload.ts → electron/preload.cjs via esbuild
+npm run dev                     # gen:preload + Vite dev server + Electron (vite-plugin-electron hot-reloads main)
+npm run build                   # tsc && vite build + gen:preload + copy preload.cjs → dist-electron/
 npx tsc --noEmit                # typecheck only (no build)
 npm run preview                 # vite preview (serve built dist locally)
 node dev.mjs                    # manual dev launcher (alternative to vite-plugin-electron)
@@ -70,15 +71,16 @@ src/App.tsx
 
 Two stores manage state with different approaches:
 
-- **`usePlayerStore`** (`src/hooks/usePlayerStore.ts`): reads all state from `electron-store` once on mount (via IPC), then writes to store on **every** state change via individual `useCallback` wrappers. No batching — every `setVolume`, `setPlayMode`, etc. triggers a separate IPC write. This is a known performance limitation. Exposes: `tracks`, `currentIndex`, `playMode`, `volume`, `favorites`, `recentTracks`, `loading`, `error`, plus setters for each.
+- **`usePlayerStore`** (`src/hooks/usePlayerStore.ts`): reads all state from `electron-store` once on mount (via IPC), then writes to store via a **debounced batch writer** (`useBatchStore`) that coalesces rapid `store:set` calls into one 100ms flush. Exposes: `tracks`, `currentIndex`, `playMode`, `volume`, `favorites`, `recentTracks`, `loading`, plus setters, `loadVideo`, `loadPlaylist`, `deleteTrack`, `reorderTracks`, and favorite CRUD methods (`addTrackToFavorite`, `removeTrackFromFavorite`, `deleteFavorite`, `reorderFavoriteTracks`).
 
-- **`useAudioPlayer`** (`src/hooks/useAudioPlayer.ts`): manages `HTMLAudioElement` lifecycle via 500ms `setInterval` polling of `audioEl` state. Fires `onTrackEnd` callback on the `<audio>` `ended` event. Controls: `playPause`, `playTrack`, `seek`, `volumeChange`. Runs a 60s interval to refresh the Bilibili audio URL (which expires ~10min).
+- **`useAudioPlayer`** (`src/hooks/useAudioPlayer.ts`): manages `HTMLAudioElement` lifecycle by attaching event listeners (`timeupdate`, `play`, `pause`, `loadedmetadata`, `volumechange`, `ended`) to the global singleton. Falls back to a 200ms interval to wait for the audio element on first render. Fires `onTrackEnd` callback on the `<audio>` `ended` event. Controls: `playPause`, `playTrack`, `seek`, `volumeChange`. Runs a 60s interval to refresh the Bilibili audio URL (only while `isPlaying && currentAudio`).
 
 ### Window behavior
 
 - `alwaysOnTop: true`, `frame: false`, `transparent: true`, `backgroundColor: '#00000000'`
 - Window drag implemented via custom mouse event handling in `FloatingPlayer.tsx` — captures `mousedown`/`mousemove`/`mouseup` on `window` and calls `window.electronAPI.windowMove()` on each move frame
 - Collapsed state renders a small circular thumb (`48px`). Thumb can be clicked to expand; expanded panel contains full player UI.
+- Expanded panel has three resize handles: east (e), south (s), and southeast (se) edges. Drag events update both window size and persisted `windowSize` state.
 - Window bounds persisted to `electron-store` on close
 - Hardware acceleration disabled (`app.disableHardwareAcceleration()`) + GPU cache disabled
 - Bilibili CDN requests (`*.hdslb.com`, `*.bilivideo.com`, `*.bilibili.com`) inject `Referer: https://www.bilibili.com/` via `webRequest.onBeforeSendHeaders`
@@ -112,9 +114,12 @@ src/
   App.tsx         # root component, wires store + audio hooks into FloatingPlayer
   types/index.ts  # Track, PlayMode, PlayerState, FavoriteFolder, ApiMessage, etc.
   services/api.ts # renderer-side IPC wrappers + global HTMLAudioElement singleton
+  utils/
+    format.ts     # formatDuration(seconds) → "m:ss" or "--:--"
+    track.ts      # isTrackFavorited(track, favorites)
   hooks/
-    usePlayerStore.ts   # global state via IPC-backed electron-store
-    useAudioPlayer.ts   # HTMLAudioElement lifecycle via setInterval polling (500ms)
+    usePlayerStore.ts   # global state via IPC-backed electron-store (debounced batch writes)
+    useAudioPlayer.ts   # HTMLAudioElement lifecycle via event listeners + URL refresh (only while playing)
   components/floating-player/
     FloatingPlayer.tsx  # collapsed thumb + mouse drag logic + expanded toggle
     ExpandedPanel.tsx   # full player UI (controls, progress, tabs, input, favorites, recent)
@@ -147,7 +152,6 @@ dev.mjs                 # manual dev launcher
 
 - ExpandedPanel's `currentAudio` prop (`{ bvid, cid, title, author, cover }`) is a **subset** of `Track` (no `duration`). This is a separate ad-hoc type from the `Track` interface in `types/index.ts` — not the same type, not derived from it.
 - `electron-store` schema defined as a generic type param `Store<{...}>` in `electron/main.ts:12-21` — the schema types are never shared with the renderer, so type vs. actual usage mismatches cause silent runtime errors.
-- `usePlayerStore` reads/writes all state via IPC on every change with **no batching** — writing state frequently (e.g., window position during drag) generates many IPC calls.
-- Audio URL refresh (60s interval in `useAudioPlayer.ts:65`) still fires even when paused. It refreshes the URL silently but won't restart playback.
+- `usePlayerStore` uses a debounced batch writer (100ms flush window) for `store:set` calls — state updates during rapid events (e.g., window resize) are coalesced, but the 100ms delay means IPC writes lag slightly behind React state.
+- The `loading` state is consumed by the add-button disabled state in ExpandedPanel but not by most other components.
 - Bilibili API uses `media_id` (not `fid`) in the favorites endpoint. The playlist URL parser in `main.ts:124` handles both `medialist/play/dlista/{seasonId}/{mid}` and `space.bilibili.com/{mid}/favlist?fid={seasonId}` formats.
-- The `loading` state from `usePlayerStore` is exposed but never consumed by any component.

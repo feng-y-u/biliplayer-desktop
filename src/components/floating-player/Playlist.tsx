@@ -1,6 +1,11 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import './Playlist.css';
 import type { Track, FavoriteFolder } from '@/types';
+import { formatDuration } from '@/utils/format';
+import { isTrackFavorited } from '@/utils/track';
+import { useDragReorder } from '@/hooks/useDragReorder';
+
+const THUMBNAIL_SIZE = 40;
 
 interface PlaylistProps {
   tracks: Track[];
@@ -10,20 +15,8 @@ interface PlaylistProps {
   onPlayTrack: (index: number) => void;
   onDeleteTrack: (index: number) => void;
   onToggleFavorite: (track: Track) => void;
+  onAddToFavorite?: (favId: string, track: Track) => void;
   onReorderTracks?: (fromIndex: number, toIndex: number) => void;
-}
-
-function formatDuration(seconds?: number): string {
-  if (!seconds || !isFinite(seconds)) return '--:--';
-  const min = Math.floor(seconds / 60);
-  const sec = Math.floor(seconds % 60);
-  return `${min}:${sec.toString().padStart(2, '0')}`;
-}
-
-function isTrackFavorited(track: Track, favorites: FavoriteFolder[]): boolean {
-  return favorites.some(f =>
-    f.tracks.some(t => t.bvid === track.bvid && t.cid === track.cid)
-  );
 }
 
 export default function Playlist({
@@ -34,42 +27,26 @@ export default function Playlist({
   onPlayTrack,
   onDeleteTrack,
   onToggleFavorite,
+  onAddToFavorite,
   onReorderTracks,
 }: PlaylistProps) {
-  const dragIndex = useRef<number | null>(null);
+  const [dropdownTrackIdx, setDropdownTrackIdx] = useState<number | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { handleDragStart, handleDragOver, handleDragLeave, handleDrop, handleDragEnd } = useDragReorder({
+    onReorder: (from, to) => onReorderTracks?.(from, to),
+  });
 
-  const handleDragStart = useCallback((index: number) => {
-    dragIndex.current = index;
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    const el = e.currentTarget as HTMLElement;
-    el.style.borderTop = index > (dragIndex.current ?? -1) ? '2px solid var(--accent)' : '';
-    el.style.borderBottom = index <= (dragIndex.current ?? -1) ? '2px solid var(--accent)' : '';
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    const el = e.currentTarget as HTMLElement;
-    el.style.borderTop = '';
-    el.style.borderBottom = '';
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent, toIndex: number) => {
-    e.preventDefault();
-    const el = e.currentTarget as HTMLElement;
-    el.style.borderTop = '';
-    el.style.borderBottom = '';
-    const from = dragIndex.current;
-    dragIndex.current = null;
-    if (from !== null && from !== toIndex && onReorderTracks) {
-      onReorderTracks(from, toIndex);
-    }
-  }, [onReorderTracks]);
-
-  const handleDragEnd = useCallback(() => {
-    dragIndex.current = null;
-  }, []);
+  // Close dropdown on click outside
+  useEffect(() => {
+    if (dropdownTrackIdx === null) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownTrackIdx(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownTrackIdx]);
 
   if (tracks.length === 0) {
     return (
@@ -114,7 +91,7 @@ export default function Playlist({
               style={{ background: track.cover ? undefined : 'linear-gradient(135deg,#6366f1,var(--accent))' }}
             >
               {track.cover ? (
-                <img src={`${track.cover}@40w_40h.jpg`} alt="" />
+                <img src={`${track.cover}@${THUMBNAIL_SIZE}w_${THUMBNAIL_SIZE}h.jpg`} alt="" />
               ) : (
                 <span>🎵</span>
               )}
@@ -132,6 +109,25 @@ export default function Playlist({
               >
                 {isTrackFavorited(track, favorites) ? '♥' : '♡'}
               </button>
+            )}
+            {onAddToFavorite && favorites.length > 0 && (
+              <div className="pl-fav-dropdown-wrapper" style={{ position: 'relative', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                <button
+                  className="pl-fav-dropdown-toggle"
+                  onClick={(e) => { e.stopPropagation(); setDropdownTrackIdx(prev => prev === index ? null : index); }}
+                  title="添加到收藏夹"
+                >▼</button>
+                {dropdownTrackIdx === index && (
+                  <div className="pl-fav-dropdown" ref={dropdownRef}>
+                    {favorites.map(f => (
+                      <div key={f.id} className="pl-fav-dropdown-item" onClick={() => { onAddToFavorite(f.id, track); setDropdownTrackIdx(null); }}>
+                        <span className="pl-fav-dropdown-item-name">{f.name}</span>
+                        <span className="pl-fav-dropdown-item-count">{f.tracks.length} 首</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
             <div className="pl-actions" onClick={(e) => e.stopPropagation()}>
               <button onClick={() => onDeleteTrack(index)} title="删除">✕</button>

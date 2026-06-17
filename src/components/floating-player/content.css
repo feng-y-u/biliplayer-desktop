@@ -312,3 +312,93 @@
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Favorites input row inside expanded folder */
+.ep-fav-input-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.ep-fav-input-row input {
+  flex: 1;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--bg);
+  color: var(--fg);
+  outline: none;
+}
+.ep-fav-input-row input:focus {
+  border-color: var(--accent);
+}
+.ep-fav-input-row button {
+  height: 28px;
+  padding: 0 10px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Favorites dropdown in playlist */
+.pl-fav-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 160px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 10;
+  padding: 4px 0;
+  margin-top: 2px;
+}
+.pl-fav-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.pl-fav-dropdown-item:hover {
+  background: var(--surface-hover);
+}
+.pl-fav-dropdown-item-name {
+  font-weight: 500;
+  color: var(--fg);
+}
+.pl-fav-dropdown-item-count {
+  font-size: 10px;
+  color: var(--muted);
+}
+.pl-fav-dropdown-toggle {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  opacity: 0.5;
+  transition: opacity 0.12s, color 0.12s;
+}
+.pl-fav-dropdown-toggle:hover {
+  opacity: 1;
+  color: var(--accent);
+}

@@ -5,13 +5,17 @@ import FloatingPlayer from '@/components/floating-player/FloatingPlayer';
 import type { Track } from '@/types';
 import { pauseAudioLocal } from './services/api';
 
+const BV_RE = /BV[a-zA-Z0-9]+/i;
+const NOTIFICATION_TIMEOUT_MS = 3000;
+const MAX_RECENT_TRACKS = 50;
+
 function App() {
   const store = usePlayerStore();
   const [notification, setNotification] = useState<string | null>(null);
 
   const showNotification = useCallback((msg: string) => {
     setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
+    setTimeout(() => setNotification(null), NOTIFICATION_TIMEOUT_MS);
   }, []);
 
   const handleNext = () => {
@@ -52,7 +56,7 @@ function App() {
     store.setCurrentIndex(newIndex);
     await playTrack(track);
     const filtered = store.recentTracks.filter(t => !(t.bvid === track.bvid && t.cid === track.cid));
-    store.setRecentTracks([track, ...filtered].slice(0, 50));
+    store.setRecentTracks([track, ...filtered].slice(0, MAX_RECENT_TRACKS));
   }, [store, playTrack]);
 
   useEffect(() => {
@@ -66,7 +70,7 @@ function App() {
       autoLoaded.current = true;
       const track = store.tracks[store.currentIndex]!;
       // Preload audio URL into player cache
-      import('./services/api').then(m => m.loadAudioTrack(track.bvid, track.cid));
+      import('./services/api').then(api => api.loadAudioTrack(track.bvid, track.cid));
     }
   }, [store.tracks, store.currentIndex]);
 
@@ -76,7 +80,7 @@ function App() {
     store.setCurrentIndex(index);
     await playTrack(track);
     const filtered = store.recentTracks.filter(t => !(t.bvid === track.bvid && t.cid === track.cid));
-    store.setRecentTracks([track, ...filtered].slice(0, 50));
+    store.setRecentTracks([track, ...filtered].slice(0, MAX_RECENT_TRACKS));
   };
 
   const handleInputSubmit = async (input: string) => {
@@ -84,7 +88,7 @@ function App() {
       const isPlaylist = /medialist\/play\/dlista\/\d+\/\d+/.test(input) || /space\.bilibili\.com\/\d+\/favlist\?.*fid=\d+/.test(input);
       if (isPlaylist) await store.loadPlaylist(input);
       else {
-        const bvidMatch = input.match(/BV[a-zA-Z0-9]+/i);
+        const bvidMatch = input.match(BV_RE);
         if (!bvidMatch) throw new Error('无效的BV号或链接');
         await store.loadVideo(bvidMatch[0]);
       }
@@ -106,20 +110,20 @@ function App() {
   }, [store]);
 
   const handleDeleteTrack = useCallback((index: number) => {
-    const total = store.tracks.length;
-    const wasCurrent = index === store.currentIndex;
-    const wasPlaying = wasCurrent && playerState.isPlaying;
+    const track = store.tracks[index];
+    if (!track) return;
 
-    if (wasPlaying && total > 1) {
-      // Compute next track before deletion (React batches state updates)
-      const remaining = store.tracks.filter((_, i) => i !== index);
-      const nextIdx = index >= remaining.length ? remaining.length - 1 : index;
-      const nextTrack = remaining[nextIdx];
-      store.deleteTrack(index);
+    const wasPlaying = index === store.currentIndex && playerState.isPlaying;
+    const isLastTrack = store.tracks.length <= 1;
+
+    store.deleteTrack(index);
+
+    if (wasPlaying && isLastTrack) {
+      pauseAudioLocal();
+    } else if (wasPlaying) {
+      const nextIndex = index < store.tracks.length - 1 ? index + 1 : index - 1;
+      const nextTrack = store.tracks[nextIndex];
       if (nextTrack) playTrack(nextTrack);
-    } else {
-      store.deleteTrack(index);
-      if (wasPlaying) pauseAudioLocal();
     }
   }, [store.tracks, store.currentIndex, playerState.isPlaying, store.deleteTrack, playTrack]);
 
@@ -153,31 +157,50 @@ function App() {
     store.reorderFavoriteTracks(favId, fromIndex, toIndex);
   }, [store]);
 
+  const handleAddToFavorite = useCallback((favId: string, track: Track) => {
+    store.addTrackToFavorite(favId, track);
+  }, [store]);
+
+  const handleAddToFavoriteFromInput = useCallback(async (favId: string, input: string) => {
+    try {
+      const bvidMatch = input.match(BV_RE);
+      if (!bvidMatch) throw new Error('无效的BV号或链接');
+      const track = await store.loadVideo(bvidMatch[0]!);
+      if (track) {
+        store.addTrackToFavorite(favId, track);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '添加失败';
+      showNotification(`添加失败：${msg}`);
+    }
+  }, [store, showNotification]);
+
   const handleToggleFavorite = useCallback((track: Track) => {
     // Check if already in any fav folder
     const isFav = store.favorites.some(f =>
       f.tracks.some(t => t.bvid === track.bvid && t.cid === track.cid)
     );
+
     if (isFav) {
-      // Remove from all folders
       store.setFavorites(store.favorites.map(f => ({
         ...f,
         tracks: f.tracks.filter(t => !(t.bvid === track.bvid && t.cid === track.cid)),
         updatedAt: Date.now(),
       })));
-    } else {
-      // Add to the first folder (or create "默认收藏夹")
-      if (store.favorites.length === 0) {
-        const newFav = { id: Date.now().toString(), name: '默认收藏夹', icon: '♥', tracks: [track], updatedAt: Date.now() };
-        store.setFavorites([newFav]);
-      } else {
-        store.setFavorites(store.favorites.map((f, i) =>
-          i === 0
-            ? { ...f, tracks: [...f.tracks, track], updatedAt: Date.now() }
-            : f
-        ));
-      }
+      return;
     }
+
+    if (store.favorites.length === 0) {
+      const newFav = { id: Date.now().toString(), name: '默认收藏夹', icon: '♥', tracks: [track], updatedAt: Date.now() };
+      store.setFavorites([newFav]);
+      return;
+    }
+
+    store.setFavorites(store.favorites.map((f, i) =>
+      i === 0
+        ? { ...f, tracks: [...f.tracks, track], updatedAt: Date.now() }
+        : f
+    ));
   }, [store.favorites, store.setFavorites]);
 
   const handlePlayFromFavorite = useCallback(async (track: Track) => {
@@ -218,6 +241,8 @@ function App() {
       favoriteActions={{
         onCreateFavorite: handleCreateFavorite,
         onToggleFavorite: handleToggleFavorite,
+        onAddToFavorite: handleAddToFavorite,
+        onAddToFavoriteFromInput: handleAddToFavoriteFromInput,
         onPlayFromFavorite: handlePlayFromFavorite,
         onRemoveFromFavorite: handleRemoveFromFavorite,
         onDeleteFavorite: handleDeleteFavorite,
