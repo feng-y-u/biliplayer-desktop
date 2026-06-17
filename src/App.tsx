@@ -6,6 +6,14 @@ import type { Track } from '@/types';
 import { pauseAudioLocal } from './services/api';
 
 const BV_RE = /BV[a-zA-Z0-9]+/i;
+const PLAYLIST_RE = /medialist\/play\/dlista\/\d+\/\d+|space\.bilibili\.com\/\d+\/favlist\?.*fid=\d+/;
+
+function parseInput(input: string): { type: 'playlist'; url: string } | { type: 'bvid'; bvid: string } | null {
+  if (PLAYLIST_RE.test(input)) return { type: 'playlist', url: input };
+  const m = input.match(BV_RE);
+  if (m) return { type: 'bvid', bvid: m[0] };
+  return null;
+}
 const NOTIFICATION_TIMEOUT_MS = 3000;
 const MAX_RECENT_TRACKS = 50;
 
@@ -85,13 +93,10 @@ function App() {
 
   const handleInputSubmit = async (input: string) => {
     try {
-      const isPlaylist = /medialist\/play\/dlista\/\d+\/\d+/.test(input) || /space\.bilibili\.com\/\d+\/favlist\?.*fid=\d+/.test(input);
-      if (isPlaylist) await store.loadPlaylist(input);
-      else {
-        const bvidMatch = input.match(BV_RE);
-        if (!bvidMatch) throw new Error('无效的BV号或链接');
-        await store.loadVideo(bvidMatch[0]);
-      }
+      const parsed = parseInput(input);
+      if (!parsed) throw new Error('无效的BV号或链接');
+      if (parsed.type === 'playlist') await store.loadPlaylist(parsed.url);
+      else await store.loadVideo(parsed.bvid);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '加载失败';
       showNotification(`加载失败：${msg}`);
@@ -163,11 +168,17 @@ function App() {
 
   const handleAddToFavoriteFromInput = useCallback(async (favId: string, input: string) => {
     try {
-      const bvidMatch = input.match(BV_RE);
-      if (!bvidMatch) throw new Error('无效的BV号或链接');
-      const track = await store.loadVideo(bvidMatch[0]!);
-      if (track) {
-        store.addTrackToFavorite(favId, track);
+      const parsed = parseInput(input);
+      if (!parsed) throw new Error('无效的BV号或链接');
+      if (parsed.type === 'playlist') {
+        const tracks = await store.loadPlaylist(parsed.url);
+        for (const track of tracks) {
+          store.addTrackToFavorite(favId, track);
+        }
+        showNotification(`已添加 ${tracks.length} 首歌曲到收藏夹`);
+      } else {
+        const track = await store.loadVideo(parsed.bvid);
+        if (track) store.addTrackToFavorite(favId, track);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : '添加失败';
