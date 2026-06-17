@@ -145,14 +145,30 @@ async function getPlaylistVideos(_mid: string, seasonId: string) {
     if (!data.data?.has_more || medias.length < PLAYLIST_PAGE_SIZE) break;
     pn++;
   }
-  return all.map((item: any) => ({
-    bvid: item.bvid,
-    cid: item.id,
-    title: item.title,
-    author: item.upper?.name || '',
-    cover: item.cover,
-    duration: item.duration,
+  // Fetch correct cid for each track (favorites API returns avid as item.id, not cid)
+  const results = await Promise.all(all.map(async (item: any) => {
+    try {
+      const info = await getVideoInfo(item.bvid);
+      return {
+        bvid: item.bvid,
+        cid: info.cid,
+        title: item.title,
+        author: item.upper?.name || '',
+        cover: item.cover,
+        duration: item.duration,
+      };
+    } catch {
+      return {
+        bvid: item.bvid,
+        cid: 0,
+        title: item.title,
+        author: item.upper?.name || '',
+        cover: item.cover,
+        duration: item.duration,
+      };
+    }
   }));
+  return results;
 }
 
 async function getAudioUrl(bvid: string, cid: number) {
