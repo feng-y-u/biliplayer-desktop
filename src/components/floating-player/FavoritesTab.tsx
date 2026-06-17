@@ -142,12 +142,12 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
               )}
             </div>
           ))}
-          <div className="ep-fav-card" onClick={() => {
+          <div className="ep-fav-card ep-fav-new" onClick={() => {
             const name = prompt('收藏夹名称：');
             if (name?.trim()) onCreateFavorite(name.trim());
           }}>
-            <div className="ep-fav-icon" style={{ background: 'var(--border)' }}>+</div>
-            <div className="ep-fav-name">新建收藏夹</div>
+            <div className="ep-fav-icon" style={{ background: 'var(--border)', borderStyle: 'dashed', borderColor: 'var(--muted)' }}>+</div>
+            <div className="ep-fav-name" style={{ color: 'var(--muted)' }}>新建收藏夹</div>
           </div>
         </div>
       )}
