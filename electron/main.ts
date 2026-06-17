@@ -7,8 +7,8 @@ import Store from 'electron-store';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const THUMB_WIDTH = 200;
-const THUMB_HEIGHT = 72;
+const THUMB_WIDTH = 64;
+const THUMB_HEIGHT = 64;
 const WINDOW_OFFSET = 40;
 const PLAYLIST_PAGE_SIZE = 20;
 const AUDIO_URL_EXPIRY_MS = 10 * 60 * 1000;

@@ -48,14 +48,15 @@
 }
 
 .float-player:not(.expanded) {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding-right: 4px;
+  transition: opacity 0.2s ease;
 }
 .float-player:not(.expanded).playing {
   opacity: 0.6;
-  transition: opacity 0.2s ease;
 }
 .float-player:not(.expanded):hover {
   opacity: 1;
@@ -112,17 +113,22 @@
 }
 
 .hover-bar {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 2px;
   background: var(--surface);
   border-radius: 28px;
-  padding: 4px 4px 4px 8px;
+  padding: 4px 8px 4px 4px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   margin-right: 8px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
+  white-space: nowrap;
 }
 .float-player:not(.expanded):hover .hover-bar {
   opacity: 1;
