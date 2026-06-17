@@ -195,7 +195,7 @@ export default function ExpandedPanel({
           onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
         />
         <button onClick={handleSubmit} disabled={loading}>
-          {loading ? '加载中…' : '添加'}
+          {loading ? <><span className="ep-spinner" />加载中</> : '添加'}
         </button>
       </div>
 
