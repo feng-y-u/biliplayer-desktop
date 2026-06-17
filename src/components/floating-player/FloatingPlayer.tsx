@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ExpandedPanel from './ExpandedPanel';
+import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
 import './FloatingPlayer.css';
 import type { CollapsedState, PlayerState, PlaylistState, PlayMode, WindowPosition, Track, FavoriteFolder } from '@/types';
 
@@ -193,8 +194,8 @@ export default function FloatingPlayer({
               <button data-no-drag onClick={onNext} title="下一首">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
               </button>
-              <button data-no-drag onClick={() => onPlayModeChange(playlistState.playMode === 'loop' ? 'shuffle' : playlistState.playMode === 'shuffle' ? 'single' : 'loop')} title="播放模式">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 17H7v-2h10v2zm-5-8H7v2h5V9zm12 3c0 5.5-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2s10 4.5 10 10z"/></svg>
+              <button data-no-drag onClick={() => onPlayModeChange(nextMode(playlistState.playMode))} title={modeTitle(playlistState.playMode)}>
+                <ModeIcon mode={playlistState.playMode} />
               </button>
             </div>
           )}

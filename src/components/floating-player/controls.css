@@ -1,0 +1,179 @@
+/* ── Controls row ── */
+.ep-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 12px;
+  flex-shrink: 0;
+}
+
+.ep-vol-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--fg-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+.ep-vol-btn:hover {
+  color: var(--accent);
+  background: var(--surface-hover);
+}
+.ep-vol-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.ep-vol-slider {
+  width: 60px;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ep-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.ep-ctrl-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.ep-mode-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--fg-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+.ep-mode-btn:hover {
+  color: var(--accent);
+  background: var(--surface-hover);
+}
+.ep-mode-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ep-ctrl-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--fg-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.ep-ctrl-btn:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+.ep-ctrl-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.ep-play-btn {
+  width: 44px;
+  height: 44px;
+  background: var(--accent);
+  color: white;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, transform 0.12s;
+}
+.ep-play-btn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.05);
+}
+.ep-play-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ep-progress {
+  padding: 0 16px 8px;
+  flex-shrink: 0;
+}
+.ep-prog-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  position: relative;
+}
+.ep-prog-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+.ep-prog-bar input[type="range"] {
+  position: absolute;
+  inset: -6px 0;
+  width: 100%;
+  height: 16px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+}
+.ep-prog-bar input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+.ep-times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
+
+/* remove orphaned rules from old vol-track */
+.ep-vol-track,
+.ep-vol-bg,
+.ep-vol-pct,
+.ep-vol-track input[type="range"] {
+  display: none;
+}

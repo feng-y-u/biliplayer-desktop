@@ -39,40 +39,32 @@ export async function getAudioUrl(bvid: string, cid: number) {
   return api({ type: 'GET_AUDIO_URL', bvid, cid });
 }
 
+/** Preload audio URL into the global player cache without playing. */
+export async function loadAudioTrack(bvid: string, cid: number): Promise<{ url: string; expiresAt: number } | null> {
+  try {
+    if (bvid === currentBvid && cid === currentCid && currentUrl && currentExpiresAt > Date.now() + 60_000) {
+      return { url: currentUrl, expiresAt: currentExpiresAt };
+    }
+    const info = await getVideoInfo(bvid);
+    if (info.success && info.data?.cid) cid = info.data.cid;
+    const res = await getAudioUrl(bvid, cid);
+    if (!res.success) return null;
+    currentUrl = res.data.url;
+    currentExpiresAt = res.data.expiresAt;
+    currentBvid = bvid;
+    currentCid = cid;
+    return { url: res.data.url, expiresAt: res.data.expiresAt };
+  } catch {
+    return null;
+  }
+}
+
 export async function playAudioLocal(bvid: string, cid: number, _title: string) {
   try {
-    const songChanged = bvid !== currentBvid || cid !== currentCid;
-    if (songChanged) {
-      currentUrl = '';
-      currentExpiresAt = 0;
-    }
-
-    if (songChanged || !currentUrl) {
-      const info = await getVideoInfo(bvid);
-      if (info.success && info.data?.cid) {
-        cid = info.data.cid;
-        if (cid !== currentCid) {
-          currentUrl = '';
-          currentExpiresAt = 0;
-        }
-      }
-    }
-
-    if (!songChanged && currentUrl && currentExpiresAt && Date.now() > currentExpiresAt - 5 * 60 * 1000) {
-      currentUrl = '';
-    }
-
-    if (!currentUrl || !currentExpiresAt) {
-      const res = await getAudioUrl(bvid, cid);
-      if (!res.success) return { success: false, error: res.error };
-      currentUrl = res.data.url;
-      currentExpiresAt = res.data.expiresAt;
-      currentBvid = bvid;
-      currentCid = cid;
-    }
-
+    const result = await loadAudioTrack(bvid, cid);
+    if (!result) return { success: false, error: 'Failed to load audio' };
     const audio = ensureAudio();
-    audio.src = currentUrl;
+    if (audio.src !== result.url) audio.src = result.url;
     await audio.play();
     return { success: true };
   } catch (e) {
@@ -87,25 +79,6 @@ export function setVolumeLocal(volume: number) { if (audioEl) audioEl.volume = v
 
 export function getAudioElement(): HTMLAudioElement | null {
   return audioEl;
-}
-
-/** Preload audio URL into the global player cache without playing */
-export async function loadAudioTrack(bvid: string, cid: number): Promise<{ url: string; expiresAt: number } | null> {
-  try {
-    const info = await getVideoInfo(bvid);
-    if (info.success && info.data?.cid) cid = info.data.cid;
-    const res = await getAudioUrl(bvid, cid);
-    if (!res.success) return null;
-    const audio = ensureAudio();
-    audio.src = res.data.url;
-    currentUrl = res.data.url;
-    currentExpiresAt = res.data.expiresAt;
-    currentBvid = bvid;
-    currentCid = cid;
-    return { url: res.data.url, expiresAt: res.data.expiresAt };
-  } catch {
-    return null;
-  }
 }
 
 export function getLocalPlayerState() {

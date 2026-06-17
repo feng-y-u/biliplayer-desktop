@@ -1,6 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './ExpandedPanel.css';
+import './panel.css';
+import './controls.css';
+import './content.css';
 import Playlist from './Playlist';
+import FavoritesTab from './FavoritesTab';
+import RecentTab from './RecentTab';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
 import type { Track, PlayMode, FavoriteFolder } from '@/types';
 
@@ -57,7 +62,12 @@ export default function ExpandedPanel({
 }: ExpandedPanelProps) {
   const [inputValue, setInputValue] = useState('');
   const [activeTab, setActiveTab] = useState<'playlist' | 'favs' | 'recent'>('playlist');
-  const prevVolume = useRef(0.7);
+  const prevVolume = useRef(volume);
+
+  // Keep prevVolume in sync with actual volume (except when muted)
+  useEffect(() => {
+    if (volume > 0) prevVolume.current = volume;
+  }, [volume]);
 
   const formatTime = (s: number) => {
     if (!s || !isFinite(s)) return '0:00';
@@ -237,47 +247,11 @@ export default function ExpandedPanel({
         )}
 
         {activeTab === 'favs' && (
-          <div className="ep-fav-grid">
-            {favorites.map(fav => (
-              <div className="ep-fav-card" key={fav.id} onClick={() => {}}>
-                <div className="ep-fav-icon" style={{ background: fav.icon.length <= 2 ? 'var(--accent)' : fav.icon }}>
-                  {fav.icon.length <= 2 ? fav.icon : '♪'}
-                </div>
-                <div className="ep-fav-name">{fav.name}</div>
-                <div className="ep-fav-meta">{fav.tracks.length} 首</div>
-              </div>
-            ))}
-            <div className="ep-fav-card" onClick={() => {
-              const name = prompt('收藏夹名称：');
-              if (name?.trim()) onCreateFavorite(name.trim());
-            }}>
-              <div className="ep-fav-icon" style={{ background: 'var(--border)' }}>+</div>
-              <div className="ep-fav-name">新建收藏夹</div>
-            </div>
-          </div>
+          <FavoritesTab favorites={favorites} onCreateFavorite={onCreateFavorite} onPlayTrack={onPlayTrack} />
         )}
 
         {activeTab === 'recent' && (
-          <div className="ep-recent-list">
-            {recentTracks.length > 0 ? recentTracks.map((track, i) => (
-              <div
-                className={`ep-recent-item ${track.bvid === currentAudio?.bvid && track.cid === currentAudio?.cid ? 'active' : ''}`}
-                key={`${track.bvid}-${track.cid}-${i}`}
-                onClick={() => {
-                  const plIndex = tracks.findIndex(t => t.bvid === track.bvid && t.cid === track.cid);
-                  if (plIndex >= 0) onPlayTrack(plIndex);
-                }}
-              >
-                <div className="ep-recent-dot" />
-                <div className="ep-recent-info">
-                  <div className="ep-recent-title">{track.title}</div>
-                  <div className="ep-recent-meta">{track.author}</div>
-                </div>
-              </div>
-            )) : (
-              <div className="ep-empty">暂无播放记录</div>
-            )}
-          </div>
+          <RecentTab recentTracks={recentTracks} currentAudio={currentAudio} tracks={tracks} onPlayTrack={onPlayTrack} />
         )}
       </div>
     </div>
