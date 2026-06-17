@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import Store from 'electron-store';
 
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -18,30 +19,26 @@ const store = new Store<{
   favorites: any[];
   recentTracks: any[];
   windowPosition: { left: number; top: number };
+  windowSize: { width: number; height: number };
 }>();
 
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
-  const bounds = store.get('windowBounds', {
-    x: undefined,
-    y: undefined,
-    width: 320,
-    height: 480,
-  });
+  // Always start at collapsed size; the renderer resizes on expand
+  const COLLAPSED_W = 200;
+  const COLLAPSED_H = 72;
 
   const display = screen.getPrimaryDisplay();
   const { width: screenW, height: screenH } = display.workAreaSize;
   const { x: workX, y: workY } = display.workArea;
 
-  let winX = bounds.x ?? workX + screenW - bounds.width - 40;
-  let winY = bounds.y ?? workY + screenH - bounds.height - 40;
-  winX = Math.max(workX, Math.min(winX, workX + screenW - bounds.width));
-  winY = Math.max(workY, Math.min(winY, workY + screenH - bounds.height));
+  let winX = workX + screenW - COLLAPSED_W - 40;
+  let winY = workY + screenH - COLLAPSED_H - 40;
 
   mainWindow = new BrowserWindow({
-    width: bounds.width,
-    height: bounds.height,
+    width: COLLAPSED_W,
+    height: COLLAPSED_H,
     x: winX,
     y: winY,
     alwaysOnTop: true,
@@ -89,7 +86,8 @@ function createWindow() {
 
   mainWindow.on('close', () => {
     if (mainWindow) {
-      store.set('windowBounds', mainWindow.getBounds());
+      const pos = mainWindow.getPosition();
+      store.set('windowPosition', { left: pos[0], top: pos[1] });
     }
   });
 
