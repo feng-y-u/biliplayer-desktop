@@ -84,7 +84,7 @@ function createWindow() {
       mainWindow?.webContents.toggleDevTools();
     });
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
   }
 
   mainWindow.on('close', () => {
