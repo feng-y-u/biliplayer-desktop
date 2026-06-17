@@ -47,12 +47,18 @@
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* Collapsed: horizontal strip, hover-bar left, thumb right */
 .float-player:not(.expanded) {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-left: 8px;
+  padding-right: 4px;
+}
+.float-player:not(.expanded).playing {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+.float-player:not(.expanded):hover {
+  opacity: 1;
 }
 
 /* Prevent browser's native image drag */
@@ -123,8 +129,8 @@
   pointer-events: auto;
 }
 .hover-bar button {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: none;
   background: none;
@@ -140,8 +146,8 @@
   color: var(--accent);
 }
 .hover-bar button svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 /* ── Resize handles ── */

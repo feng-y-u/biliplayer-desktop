@@ -5,8 +5,8 @@ import './FloatingPlayer.css';
 import type { CollapsedState, PlayerState, PlaylistState, PlayMode, WindowPosition, WindowSize, Track, FavoriteFolder } from '@/types';
 
 // Window size constants
-const THUMB_WIDTH = 200;
-const THUMB_HEIGHT = 72;
+const THUMB_WIDTH = 64;
+const THUMB_HEIGHT = 64;
 const PANEL_MIN_WIDTH = 320;
 const PANEL_MIN_HEIGHT = 480;
 const DRAG_THRESHOLD = 5;
@@ -251,7 +251,7 @@ export default function FloatingPlayer({
   return (
     <div
       ref={containerRef}
-      className={`float-player${collapsedState === 'expanded' ? ' expanded' : ''}`}
+      className={`float-player${collapsedState === 'expanded' ? ' expanded' : ''}${playerState.isPlaying ? ' playing' : ''}`}
       onMouseDown={handleMouseDown}
     >
       {collapsedState !== 'expanded' && (
