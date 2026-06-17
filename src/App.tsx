@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { usePlayerStore } from './hooks/usePlayerStore';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
 import FloatingPlayer from '@/components/floating-player/FloatingPlayer';
+import type { Track } from '@/types';
 
 function App() {
   const store = usePlayerStore();
@@ -37,6 +38,15 @@ function App() {
       playPause();
     }
   }, [playerState.currentAudio, store.tracks, store.currentIndex, playTrack, playPause]);
+
+  const addTrackToPlaylistAndPlay = useCallback(async (track: Track) => {
+    const newIndex = store.tracks.length;
+    store.setTracks([...store.tracks, track]);
+    store.setCurrentIndex(newIndex);
+    await playTrack(track);
+    const filtered = store.recentTracks.filter(t => !(t.bvid === track.bvid && t.cid === track.cid));
+    store.setRecentTracks([track, ...filtered].slice(0, 50));
+  }, [store, playTrack]);
 
   useEffect(() => {
     syncVolume(store.volume);
@@ -92,6 +102,42 @@ function App() {
     store.setFavorites([...store.favorites, { id: Date.now().toString(), name, icon: '🎵', tracks: [], updatedAt: Date.now() }]);
   };
 
+  const handleToggleFavorite = useCallback((track: Track) => {
+    // Check if already in any fav folder
+    const isFav = store.favorites.some(f =>
+      f.tracks.some(t => t.bvid === track.bvid && t.cid === track.cid)
+    );
+    if (isFav) {
+      // Remove from all folders
+      store.setFavorites(store.favorites.map(f => ({
+        ...f,
+        tracks: f.tracks.filter(t => !(t.bvid === track.bvid && t.cid === track.cid)),
+        updatedAt: Date.now(),
+      })));
+    } else {
+      // Add to the first folder (or create "默认收藏夹")
+      if (store.favorites.length === 0) {
+        const newFav = { id: Date.now().toString(), name: '默认收藏夹', icon: '♥', tracks: [track], updatedAt: Date.now() };
+        store.setFavorites([newFav]);
+      } else {
+        store.setFavorites(store.favorites.map((f, i) =>
+          i === 0
+            ? { ...f, tracks: [...f.tracks, track], updatedAt: Date.now() }
+            : f
+        ));
+      }
+    }
+  }, [store.favorites, store.setFavorites]);
+
+  const handlePlayFromFavorite = useCallback(async (track: Track) => {
+    const plIndex = store.tracks.findIndex(t => t.bvid === track.bvid && t.cid === track.cid);
+    if (plIndex >= 0) {
+      await handlePlayTrack(plIndex);
+    } else {
+      await addTrackToPlaylistAndPlay(track);
+    }
+  }, [store.tracks, handlePlayTrack, addTrackToPlaylistAndPlay]);
+
   return (
     <FloatingPlayer
       storage={{
@@ -100,6 +146,7 @@ function App() {
         tracks: store.tracks,
         currentIndex: store.currentIndex,
         windowPosition: store.windowPosition,
+        windowSize: store.windowSize,
         favorites: store.favorites,
         recentTracks: store.recentTracks,
         setVolume: store.setVolume,
@@ -107,6 +154,7 @@ function App() {
         setTracks: store.setTracks,
         setCurrentIndex: store.setCurrentIndex,
         setWindowPosition: store.setWindowPosition,
+        setWindowSize: store.setWindowSize,
       }}
       playerState={{ ...playerState, currentAudio: store.tracks[store.currentIndex] || null }}
       playlistState={{ tracks: store.tracks, currentIndex: store.currentIndex, playMode: store.playMode }}
@@ -121,7 +169,8 @@ function App() {
       onPlayModeChange={store.setPlayMode}
       onInputSubmit={handleInputSubmit}
       onCreateFavorite={handleCreateFavorite}
-      onAddTrackToFavorite={store.addTrackToFavorite}
+      onToggleFavorite={handleToggleFavorite}
+      onPlayFromFavorite={handlePlayFromFavorite}
     />
   );
 }
