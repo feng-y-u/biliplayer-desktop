@@ -83,6 +83,10 @@ export default function FloatingPlayer({
   } | null>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastExpandedSizeRef = useRef<{ width: number; height: number }>({
+    width: 400,
+    height: 600,
+  });
 
   // Sync window size when user drags resize handles (only when expanded)
   useEffect(() => {
@@ -176,6 +180,10 @@ export default function FloatingPlayer({
       resizeSession.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      lastExpandedSizeRef.current = {
+        width: storage.windowSize.width,
+        height: storage.windowSize.height,
+      };
     }
 
     window.addEventListener('mousemove', onResizeMove);
@@ -232,8 +240,9 @@ export default function FloatingPlayer({
       const pos = await api.windowGetPosition();
       collapsedPosRef.current = { x: pos.x, y: pos.y };
       const thumbCenterX = pos.x + THUMB_WIDTH / 2;
-      const targetW = Math.min(storage.windowSize.width, window.screen.width - 40);
-      const targetH = Math.min(storage.windowSize.height, window.screen.height - 40);
+      const remembered = lastExpandedSizeRef.current;
+      const targetW = Math.min(remembered.width, window.screen.width - 40);
+      const targetH = Math.min(remembered.height, window.screen.height - 40);
       let expandedX = thumbCenterX - targetW / 2;
       let expandedY = pos.y;
       expandedX = Math.max(20, Math.min(expandedX, window.screen.width - targetW - 20));
