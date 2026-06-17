@@ -82,6 +82,7 @@ export default function FloatingPlayer({
     edge: 'e' | 'se' | 's';
   } | null>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
+  const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync window size when user drags resize handles (only when expanded)
   useEffect(() => {
@@ -185,6 +186,13 @@ export default function FloatingPlayer({
     };
   }, [storage.setWindowSize]);
 
+  // Cleanup collapse timer on unmount
+  useEffect(() => {
+    return () => {
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    };
+  }, []);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     // In expanded state, only start drag from the top bar
     if (collapsedState === 'expanded') {
@@ -241,9 +249,11 @@ export default function FloatingPlayer({
       api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
       api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
       setAnimating('collapse');
-      setTimeout(() => {
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = setTimeout(() => {
         setCollapsedState('collapsed');
         setAnimating(null);
+        collapseTimerRef.current = null;
       }, 200);
     }
   }, [collapsedState, storage.windowSize]);
@@ -254,6 +264,7 @@ export default function FloatingPlayer({
     if (pos) api.windowMove(pos.x, pos.y);
     api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
     api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
+    setAnimating(null);
     setCollapsedState('collapsed');
   }, []);
 
@@ -263,7 +274,7 @@ export default function FloatingPlayer({
       className={[
         'float-player',
         collapsedState === 'expanded' && 'expanded',
-        collapsedState === 'collapsed' && animating === 'collapse' && 'collapsing',
+        animating === 'collapse' && 'collapsing',
         playerState.isPlaying && 'playing',
       ].filter(Boolean).join(' ')}
       onMouseDown={handleMouseDown}
@@ -297,7 +308,7 @@ export default function FloatingPlayer({
       )}
 
       {collapsedState === 'expanded' && (
-        <div style={{ pointerEvents: animating === 'expand' ? 'none' : 'auto' }}>
+        <div style={{ pointerEvents: animating !== null ? 'none' : 'auto' }}>
           <ExpandedPanel
             currentAudio={playerState.currentAudio}
             currentTime={playerState.currentTime}
