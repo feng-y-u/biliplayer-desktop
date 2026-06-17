@@ -25,6 +25,18 @@
   color: var(--muted);
   flex-shrink: 0;
 }
+.pl-status-icon {
+  display: inline-block;
+  font-size: 10px;
+  line-height: 1;
+}
+.pl-status-icon.playing {
+  animation: pl-bounce 0.6s ease-in-out infinite alternate;
+}
+@keyframes pl-bounce {
+  from { transform: scale(1); }
+  to { transform: scale(1.25); }
+}
 .pl-thumb {
   width: 32px;
   height: 32px;
@@ -89,4 +101,31 @@
 .pl-actions button:hover {
   background: var(--surface-hover);
   color: var(--fg);
+}
+
+.pl-fav-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--muted);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+}
+.playlist-item:hover .pl-fav-btn {
+  opacity: 1;
+}
+.pl-fav-btn.favorited {
+  opacity: 1;
+  color: #e74c3c;
+}
+.pl-fav-btn:hover {
+  color: #e74c3c;
 }
