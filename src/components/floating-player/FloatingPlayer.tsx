@@ -92,6 +92,7 @@ export default function FloatingPlayer({
       api.windowSetMinimumSize(EXPANDED_MIN_W, EXPANDED_MIN_H);
     } else {
       api.windowResize(COLLAPSED_W, COLLAPSED_H);
+      api.windowSetMinimumSize(1, 1); // remove minimum size constraint
     }
   }, [collapsedState, storage.windowSize.width, storage.windowSize.height]);
 
