@@ -1,18 +1,4 @@
-declare global {
-  interface Window {
-    electronAPI: {
-      api: (message: any) => Promise<any>;
-      storeGet: (key: string) => Promise<any>;
-      storeSet: (key: string, value: any) => Promise<void>;
-      windowMove: (x: number, y: number) => Promise<void>;
-      windowResize: (w: number, h: number) => Promise<void>;
-      windowGetPosition: () => Promise<{ x: number; y: number; width: number; height: number }>;
-      windowSetMinimumSize: (w: number, h: number) => Promise<void>;
-    };
-  }
-}
-
-const api = window.electronAPI?.api;
+import { invoke } from '@tauri-apps/api/core';
 
 const DEFAULT_VOLUME = 0.7;
 const URL_REFRESH_THRESHOLD_MS = 60_000;
@@ -33,15 +19,15 @@ function ensureAudio(): HTMLAudioElement {
 }
 
 export async function getVideoInfo(bvid: string) {
-  return api({ type: 'GET_VIDEO_INFO', bvid });
+  return invoke<{ success: boolean; data?: any; error?: string }>('api', { message: { type: 'GET_VIDEO_INFO', bvid } });
 }
 
 export async function getPlaylist(url: string) {
-  return api({ type: 'GET_PLAYLIST', url });
+  return invoke<{ success: boolean; data?: any; error?: string }>('api', { message: { type: 'GET_PLAYLIST', url } });
 }
 
 export async function getAudioUrl(bvid: string, cid: number) {
-  return api({ type: 'GET_AUDIO_URL', bvid, cid });
+  return invoke<{ success: boolean; data?: any; error?: string }>('api', { message: { type: 'GET_AUDIO_URL', bvid, cid } });
 }
 
 /** Preload audio URL into the global player cache without playing. */
