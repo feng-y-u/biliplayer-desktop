@@ -15,7 +15,7 @@ npm run preview      # serve built dist locally
 node dev.mjs         # manual dev launcher (fallback if vite-plugin-electron misbehaves)
 ```
 
-`gen:preload` compiles `electron/preload.ts` → `electron/preload.cjs` via esbuild. It runs automatically as part of `dev` and `build`.
+`gen:preload` compiles `electron/preload.ts` → `electron/preload.cjs` via esbuild. Runs automatically as part of `dev` and `build`.
 
 Pre-commit hook runs `npx lint-staged` which typechecks staged `*.{ts,tsx}`.
 
@@ -85,7 +85,17 @@ src/
 
 ## CI
 
-GitHub Actions runs on push/PR to `main`: `npm ci` → `tsc --noEmit` → `npm run build`.
+GitHub Actions runs on push/PR to `main`: `npm ci` → `tsc --noEmit` → `npm run build`. Note: CI does **not** run `npm run test`.
+
+## Tests
+
+Three test files exist:
+- `src/utils/__tests__/format.test.ts`
+- `src/utils/__tests__/track.test.ts`
+- `src/components/floating-player/__tests__/ModeIcon.test.ts`
+- `electron/__tests__/features.test.ts`
+
+Tests use vitest. Run with `npm run test` or `npm run test:watch`.
 
 ## Gotchas
 
@@ -98,3 +108,4 @@ GitHub Actions runs on push/PR to `main`: `npm ci` → `tsc --noEmit` → `npm r
 - Module-level singletons in `api.ts` (`audioEl`, URL cache) hold implicit state — be aware when touching playback logic.
 - `utils/format.ts` has a known bug: `formatDuration(0)` returns `'--:--'` instead of `'0:00'` due to falsy check. Tests document this as expected behavior.
 - `react-draggable` is listed in `package.json` dependencies but is **unused** — the app uses custom drag handling via `useDragReorder.ts` and `FloatingPlayer.tsx`.
+- **README.md is stale** — references non-existent files (`useStorage.ts`, `usePlaylist.ts`, `vite.config.electron.ts`). Ignore its directory layout; trust the structure above.
