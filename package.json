@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "dist/main.js",
   "scripts": {
     "dev": "tauri dev",
     "dev:vite": "vite",
