@@ -9,6 +9,10 @@ fn main() {
             commands::bilibili::api,
             commands::store::store_get,
             commands::store::store_set,
+            commands::window::window_move,
+            commands::window::window_resize,
+            commands::window::get_position,
+            commands::window::set_min_size,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
