@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nickelpack/tauri-v2/main/crates/tauri-config-schema/schema.json",
+  "productName": "Piliplayer",
+  "version": "0.1.0",
+  "identifier": "com.biliplayer.local",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev:vite",
+    "beforeBuildCommand": "npm run build:vite"
+  },
+  "app": {
+    "windows": [
+      {
+        "width": 320,
+        "height": 480,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": []
+  }
+}
