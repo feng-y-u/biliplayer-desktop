@@ -266,8 +266,8 @@ export default function FloatingPlayer({
       if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
       collapseTimerRef.current = setTimeout(() => {
         if (pos) api.windowMove(pos.x, pos.y);
-        api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
         api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
+        api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
         setCollapsedState('collapsed');
         setAnimating(null);
         collapseTimerRef.current = null;
@@ -282,8 +282,8 @@ export default function FloatingPlayer({
     if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
     collapseTimerRef.current = setTimeout(() => {
       if (pos) api.windowMove(pos.x, pos.y);
-      api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
       api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
+      api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
       setCollapsedState('collapsed');
       setAnimating(null);
       collapseTimerRef.current = null;
