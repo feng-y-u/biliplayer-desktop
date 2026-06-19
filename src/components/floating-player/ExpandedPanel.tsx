@@ -43,6 +43,7 @@ interface ExpandedPanelProps {
     onReorderFavTracks: (favId: string, fromIndex: number, toIndex: number) => void;
     onAddToFavorite?: (favId: string, track: Track) => void;
     onAddToFavoriteFromInput?: (favId: string, input: string) => Promise<void>;
+    onAddAllToPlaylist?: (tracks: Track[]) => void;
   };
   onClose: () => void;
   onInputSubmit: (input: string) => void;
@@ -233,7 +234,8 @@ export default function ExpandedPanel({
           <FavoritesTab favorites={favorites} onCreateFavorite={favoriteActions.onCreateFavorite}
             onPlayTrack={favoriteActions.onPlayFromFavorite} onRemoveTrack={favoriteActions.onRemoveFromFavorite}
             onDeleteFavorite={favoriteActions.onDeleteFavorite} onReorderTracks={favoriteActions.onReorderFavTracks}
-            onAddToFavoriteFromInput={favoriteActions.onAddToFavoriteFromInput} />
+            onAddToFavoriteFromInput={favoriteActions.onAddToFavoriteFromInput}
+            onAddAllToPlaylist={favoriteActions.onAddAllToPlaylist} />
         )}
 
         {activeTab === 'recent' && (

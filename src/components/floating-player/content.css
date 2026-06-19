@@ -259,8 +259,33 @@
 .ep-fav-card-del:hover {
   color: #e74c3c;
 }
+
+.ep-fav-card-add {
+  position: absolute;
+  top: 4px;
+  right: 28px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+  z-index: 1;
+}
+.ep-fav-card:hover .ep-fav-card-add {
+  opacity: 1;
+}
+.ep-fav-card-add:hover {
+  color: var(--accent);
+}
 .ep-fav-view {
-  /* wrapper for empty state */
 }
 
 .ep-recent-list {

@@ -89,7 +89,7 @@ GitHub Actions runs on push/PR to `main`: `npm ci` → `tsc --noEmit` → `npm r
 
 ## Tests
 
-Three test files exist:
+Four test files exist:
 - `src/utils/__tests__/format.test.ts`
 - `src/utils/__tests__/track.test.ts`
 - `src/components/floating-player/__tests__/ModeIcon.test.ts`
@@ -102,7 +102,7 @@ Tests use vitest. Run with `npm run test` or `npm run test:watch`.
 - Audio URLs from Bilibili expire ~10 min. `useAudioPlayer.ts` refreshes every 60s while playing; `api.ts` proactively skips re-fetch if current URL is >60s from expiry.
 - `usePlayerStore` reads all state from `electron-store` once on mount (via IPC), then writes via a **debounced batch writer** (`useBatchStore`, 100ms flush window) — rapid state updates are coalesced into one IPC flush.
 - `electron-store` schema defined as a generic type param in `electron/main.ts:13-22` — the schema types are never shared with the renderer, so type vs. actual usage mismatches cause silent runtime errors.
-- ExpandedPanel's `currentAudio` prop (`{ bvid, cid, title, author, cover }`) is a **subset** of `Track` (no `duration`). This is a separate ad-hoc type from the `Track` interface in `types/index.ts`.
+- ExpandedPanel's `currentAudio` prop uses `CurrentAudio` which is `Pick<Track, 'bvid' | 'cid' | 'title' | 'author' | 'cover'>` — missing `duration`. Defined in `types/index.ts:55`.
 - Bilibili CDN requests inject `Referer: https://www.bilibili.com/` via `webRequest.onBeforeSendHeaders` in main process.
 - Bilibili API uses `media_id` (not `fid`) in the favorites endpoint. The playlist URL parser in `main.ts:121-127` handles both `medialist/play/dlista/{seasonId}/{mid}` and `space.bilibili.com/{mid}/favlist?fid={seasonId}` formats.
 - Module-level singletons in `api.ts` (`audioEl`, URL cache) hold implicit state — be aware when touching playback logic.

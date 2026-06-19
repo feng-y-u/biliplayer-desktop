@@ -46,7 +46,10 @@ function App() {
   const { state: playerState, playPause, playTrack, seek, volumeChange, syncVolume } = useAudioPlayer(() => {
     const nextIndex = handleNext();
     if (nextIndex !== null && store.tracks[nextIndex]) {
-      playTrack(store.tracks[nextIndex]!);
+      const track = store.tracks[nextIndex]!;
+      playTrack(track).then(ok => {
+        if (!ok) setTimeout(() => playTrack(track), 1000);
+      });
     }
   });
 
@@ -186,6 +189,17 @@ function App() {
     }
   }, [store, showNotification]);
 
+  const handleAddAllToPlaylist = useCallback((tracks: Track[]) => {
+    const existing = new Set(store.tracks.map(t => t.bvid));
+    const newTracks = tracks.filter(t => !existing.has(t.bvid));
+    if (newTracks.length === 0) {
+      showNotification('所有歌曲已在播放列表中');
+      return;
+    }
+    store.setTracks([...store.tracks, ...newTracks]);
+    showNotification(`已添加 ${newTracks.length} 首歌曲到播放列表`);
+  }, [store, showNotification]);
+
   const handleToggleFavorite = useCallback((track: Track) => {
     // Check if already in any fav folder
     const isFav = store.favorites.some(f =>
@@ -258,6 +272,7 @@ function App() {
         onRemoveFromFavorite: handleRemoveFromFavorite,
         onDeleteFavorite: handleDeleteFavorite,
         onReorderFavTracks: handleReorderFavTracks,
+        onAddAllToPlaylist: handleAddAllToPlaylist,
       }}
       onInputSubmit={handleInputSubmit}
       loading={store.loading}

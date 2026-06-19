@@ -19,9 +19,10 @@ interface FavoritesTabProps {
   onDeleteFavorite?: (favId: string) => void;
   onReorderTracks?: (favId: string, fromIndex: number, toIndex: number) => void;
   onAddToFavoriteFromInput?: (favId: string, input: string) => Promise<void>;
+  onAddAllToPlaylist?: (tracks: Track[]) => void;
 }
 
-export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack, onRemoveTrack, onDeleteFavorite, onReorderTracks, onAddToFavoriteFromInput }: FavoritesTabProps) {
+export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack, onRemoveTrack, onDeleteFavorite, onReorderTracks, onAddToFavoriteFromInput, onAddAllToPlaylist }: FavoritesTabProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [addingToFavId, setAddingToFavId] = useState<string | null>(null);
@@ -101,6 +102,13 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
                   onClick={(e) => { e.stopPropagation(); if (confirm(`删除收藏夹「${fav.name}」？`)) onDeleteFavorite(fav.id); }}
                   title="删除收藏夹"
                 >✕</button>
+              )}
+              {onAddAllToPlaylist && fav.tracks.length > 0 && (
+                <button
+                  className="ep-fav-card-add"
+                  onClick={(e) => { e.stopPropagation(); onAddAllToPlaylist(fav.tracks); }}
+                  title="添加到播放列表"
+                >+</button>
               )}
               {expandedId === fav.id && (
                 <div className="ep-fav-tracks">

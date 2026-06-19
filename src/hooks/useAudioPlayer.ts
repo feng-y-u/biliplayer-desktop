@@ -38,6 +38,11 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
       const onMeta = () => setState(prev => ({ ...prev, duration: el.duration }));
       const onVolume = () => setState(prev => ({ ...prev, volume: el.volume }));
       const onEnded = () => onTrackEndRef.current?.();
+      const onError = () => {
+        if (el.error && el.error.code !== MediaError.MEDIA_ERR_ABORTED) {
+          onTrackEndRef.current?.();
+        }
+      };
 
       el.addEventListener('timeupdate', onTimeUpdate);
       el.addEventListener('play', onPlay);
@@ -45,6 +50,7 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
       el.addEventListener('loadedmetadata', onMeta);
       el.addEventListener('volumechange', onVolume);
       el.addEventListener('ended', onEnded);
+      el.addEventListener('error', onError);
 
       cleanup.push(
         () => el.removeEventListener('timeupdate', onTimeUpdate),
@@ -53,6 +59,7 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
         () => el.removeEventListener('loadedmetadata', onMeta),
         () => el.removeEventListener('volumechange', onVolume),
         () => el.removeEventListener('ended', onEnded),
+        () => el.removeEventListener('error', onError),
       );
 
       // Sync initial state if element already had audio loaded
@@ -109,7 +116,7 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
     else resumeAudioLocal();
   }, [state.isPlaying]);
 
-  const playTrack = useCallback(async (track: Track) => {
+  const playTrack = useCallback(async (track: Track): Promise<boolean> => {
     const result = await playAudioLocal(track.bvid, track.cid, track.title);
     if (result.success) {
       setState(prev => ({
@@ -120,6 +127,7 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
         currentAudio: { bvid: track.bvid, cid: track.cid, title: track.title, author: track.author, cover: track.cover },
       }));
     }
+    return result.success;
   }, [state.volume]);
 
   const seek = useCallback(async (time: number) => {

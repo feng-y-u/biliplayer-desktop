@@ -46,6 +46,7 @@ interface FloatingPlayerProps {
     onReorderFavTracks: (favId: string, fromIndex: number, toIndex: number) => void;
     onAddToFavorite?: (favId: string, track: Track) => void;
     onAddToFavoriteFromInput?: (favId: string, input: string) => Promise<void>;
+    onAddAllToPlaylist?: (tracks: Track[]) => void;
   };
   onInputSubmit: (input: string) => void;
   loading: boolean;
@@ -261,12 +262,12 @@ export default function FloatingPlayer({
       setCollapsedState('expanded');
     } else {
       const pos = collapsedPosRef.current;
-      if (pos) api.windowMove(pos.x, pos.y);
-      api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
-      api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
       setAnimating('collapse');
       if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
       collapseTimerRef.current = setTimeout(() => {
+        if (pos) api.windowMove(pos.x, pos.y);
+        api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
+        api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
         setCollapsedState('collapsed');
         setAnimating(null);
         collapseTimerRef.current = null;
@@ -277,11 +278,16 @@ export default function FloatingPlayer({
   const handleClose = useCallback(() => {
     const api = window.electronAPI;
     const pos = collapsedPosRef.current;
-    if (pos) api.windowMove(pos.x, pos.y);
-    api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
-    api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
-    setAnimating(null);
-    setCollapsedState('collapsed');
+    setAnimating('collapse');
+    if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    collapseTimerRef.current = setTimeout(() => {
+      if (pos) api.windowMove(pos.x, pos.y);
+      api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
+      api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
+      setCollapsedState('collapsed');
+      setAnimating(null);
+      collapseTimerRef.current = null;
+    }, 200);
   }, []);
 
   return (
@@ -324,7 +330,7 @@ export default function FloatingPlayer({
       )}
 
       {collapsedState === 'expanded' && (
-        <div style={{ pointerEvents: animating !== null ? 'none' : 'auto' }}>
+        <div style={{ pointerEvents: animating !== null ? 'none' : 'auto', width: '100%', height: '100%' }}>
           <ExpandedPanel
             currentAudio={playerState.currentAudio}
             currentTime={playerState.currentTime}
