@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { Track, FavoriteFolder } from '@/types';
+import { useDragReorder } from '@/hooks/useDragReorder';
 
 const FAV_ICON_SIZE = 80;
 
@@ -26,7 +27,6 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [addingToFavId, setAddingToFavId] = useState<string | null>(null);
-  const dragItem = useRef<{ favId: string; index: number } | null>(null);
 
   // Clean up expandedId if the expanded folder no longer exists
   useEffect(() => {
@@ -39,37 +39,14 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
     setExpandedId(prev => prev === id ? null : id);
   };
 
-  const handleDragStart = useCallback((favId: string, index: number) => {
-    dragItem.current = { favId, index };
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    const el = e.currentTarget as HTMLElement;
-    el.style.borderTop = index > (dragItem.current?.index ?? -1) ? '2px solid var(--accent)' : '';
-    el.style.borderBottom = index <= (dragItem.current?.index ?? -1) ? '2px solid var(--accent)' : '';
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    const el = e.currentTarget as HTMLElement;
-    el.style.borderTop = '';
-    el.style.borderBottom = '';
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent, toIndex: number) => {
-    e.preventDefault();
-    const el = e.currentTarget as HTMLElement;
-    el.style.borderTop = '';
-    el.style.borderBottom = '';
-    if (dragItem.current && onReorderTracks) {
-      onReorderTracks(dragItem.current.favId, dragItem.current.index, toIndex);
-    }
-    dragItem.current = null;
-  }, [onReorderTracks]);
-
-  const handleDragEnd = useCallback(() => {
-    dragItem.current = null;
-  }, []);
+  const { handleDragStart, handleDragOver, handleDragLeave, handleDrop, handleDragEnd } =
+    useDragReorder<string>({
+      onReorder: (_from, _to, favId) => {
+        if (onReorderTracks && favId) {
+          onReorderTracks(favId, _from, _to);
+        }
+      },
+    });
 
   return (
     <div className="ep-fav-view">
@@ -124,7 +101,7 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
                   {fav.tracks.length > 0 ? fav.tracks.map((track, ti) => (
                     <div className="ep-fav-track" key={`${track.bvid}-${track.cid}`}
                       draggable={!!onReorderTracks}
-                      onDragStart={() => handleDragStart(fav.id, ti)}
+                      onDragStart={() => handleDragStart(ti, fav.id)}
                       onDragOver={(e) => handleDragOver(e, ti)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, ti)}
