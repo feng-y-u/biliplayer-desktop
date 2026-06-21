@@ -43,13 +43,7 @@ export interface FavoriteFolder {
   updatedAt: number;
 }
 
-export type ApiMessage =
-  | { type: 'GET_VIDEO_INFO'; bvid: string }
-  | { type: 'GET_PLAYLIST'; url: string }
-  | { type: 'GET_AUDIO_URL'; bvid: string; cid: number };
-
-export type ApiResponse =
-  | { success: true; data: any }
-  | { success: false; error: string };
-
 export type CurrentAudio = Pick<Track, 'bvid' | 'cid' | 'title' | 'author' | 'cover'>;
+
+export type { VideoInfo, AudioUrl, ApiResponse } from './api';
+export type { IpcMessage, IpcResponse } from './ipc';
