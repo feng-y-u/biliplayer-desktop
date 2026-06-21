@@ -11,11 +11,3 @@ export interface AudioUrl {
   url: string;
   expiresAt: number;
 }
-
-export interface PlaylistData {
-  tracks: VideoInfo[];
-}
-
-export type ApiResponse<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };

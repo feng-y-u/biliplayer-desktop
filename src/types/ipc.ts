@@ -1,4 +1,4 @@
-import type { VideoInfo, AudioUrl, PlaylistData } from './api';
+import type { VideoInfo, AudioUrl } from './api';
 
 export type IpcMessage =
   | { type: 'GET_VIDEO_INFO'; bvid: string }
@@ -7,7 +7,7 @@ export type IpcMessage =
 
 export type IpcResponseMap = {
   GET_VIDEO_INFO: VideoInfo;
-  GET_PLAYLIST: PlaylistData;
+  GET_PLAYLIST: VideoInfo[];
   GET_AUDIO_URL: AudioUrl;
 };
 

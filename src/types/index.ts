@@ -45,5 +45,5 @@ export interface FavoriteFolder {
 
 export type CurrentAudio = Pick<Track, 'bvid' | 'cid' | 'title' | 'author' | 'cover'>;
 
-export type { VideoInfo, AudioUrl, ApiResponse } from './api';
+export type { VideoInfo, AudioUrl } from './api';
 export type { IpcMessage, IpcResponse } from './ipc';
