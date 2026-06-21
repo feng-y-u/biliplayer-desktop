@@ -239,6 +239,21 @@ export default function FloatingPlayer({
     document.body.style.userSelect = 'none';
   }, [storage.windowSize]);
 
+  const collapseWindow = useCallback(() => {
+    const api = window.electronAPI;
+    const pos = collapsedPosRef.current;
+    setAnimating('collapse');
+    if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    collapseTimerRef.current = setTimeout(() => {
+      if (pos) api.windowMove(pos.x, pos.y);
+      api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
+      api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
+      setCollapsedState('collapsed');
+      setAnimating(null);
+      collapseTimerRef.current = null;
+    }, 200);
+  }, []);
+
   const handleThumbClick = useCallback(async () => {
     if (didDrag.current) {
       didDrag.current = false;
@@ -262,34 +277,13 @@ export default function FloatingPlayer({
       api.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
       setCollapsedState('expanded');
     } else {
-      const pos = collapsedPosRef.current;
-      setAnimating('collapse');
-      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
-      collapseTimerRef.current = setTimeout(() => {
-        if (pos) api.windowMove(pos.x, pos.y);
-        api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
-        api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
-        setCollapsedState('collapsed');
-        setAnimating(null);
-        collapseTimerRef.current = null;
-      }, 200);
+      collapseWindow();
     }
-  }, [collapsedState, storage.windowSize]);
+  }, [collapsedState, storage.windowSize, collapseWindow]);
 
   const handleClose = useCallback(() => {
-    const api = window.electronAPI;
-    const pos = collapsedPosRef.current;
-    setAnimating('collapse');
-    if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
-    collapseTimerRef.current = setTimeout(() => {
-      if (pos) api.windowMove(pos.x, pos.y);
-      api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
-      api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
-      setCollapsedState('collapsed');
-      setAnimating(null);
-      collapseTimerRef.current = null;
-    }, 200);
-  }, []);
+    collapseWindow();
+  }, [collapseWindow]);
 
   return (
     <div
