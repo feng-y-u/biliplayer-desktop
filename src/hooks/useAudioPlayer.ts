@@ -26,6 +26,8 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
   const refreshTimerRef = useRef<number | null>(null);
   const currentAudioRef = useRef(state.currentAudio);
   currentAudioRef.current = state.currentAudio;
+  const isPlayingRef = useRef(state.isPlaying);
+  isPlayingRef.current = state.isPlaying;
 
   // Attach event listeners to audio element once it exists
   useEffect(() => {
@@ -112,9 +114,9 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
   }, [state.isPlaying, state.currentAudio]);
 
   const playPause = useCallback(async () => {
-    if (state.isPlaying) pauseAudioLocal();
+    if (isPlayingRef.current) pauseAudioLocal();
     else resumeAudioLocal();
-  }, [state.isPlaying]);
+  }, []);
 
   const playTrack = useCallback(async (track: Track): Promise<boolean> => {
     const result = await playAudioLocal(track.bvid, track.cid, track.title);
