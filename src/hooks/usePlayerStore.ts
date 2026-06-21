@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Track, FavoriteFolder, PlayMode, WindowPosition, WindowSize } from '../types';
 import { getVideoInfo, getPlaylist } from '../services/api';
+import { isSameTrack } from '../utils/track';
 
 const store = window.electronAPI!;
 const BATCH_FLUSH_DELAY_MS = 100;
@@ -196,7 +197,7 @@ export function usePlayerStore() {
     setFavoritesState((prev) => {
       const next = prev.map(f => {
         if (f.id !== favId) return f;
-        if (f.tracks.some(t => t.bvid === track.bvid && t.cid === track.cid)) return f;
+        if (f.tracks.some(t => isSameTrack(t, track))) return f;
         return { ...f, tracks: [...f.tracks, track], updatedAt: Date.now() };
       });
       batchSet('favorites', next);

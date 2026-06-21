@@ -1,5 +1,5 @@
 import type { Track, FavoriteFolder } from '@/types';
-import { isTrackFavorited } from '@/utils/track';
+import { isTrackFavorited, isSameTrack } from '@/utils/track';
 import './Playlist.css';
 
 interface RecentTabProps {
@@ -15,7 +15,7 @@ export default function RecentTab({ recentTracks, currentAudio, favorites, onPla
     <div className="ep-recent-list">
       {recentTracks.length > 0 ? recentTracks.map((track, i) => (
         <div
-          className={`ep-recent-item ${track.bvid === currentAudio?.bvid && track.cid === currentAudio?.cid ? 'active' : ''}`}
+          className={`ep-recent-item ${currentAudio && isSameTrack(track, currentAudio) ? 'active' : ''}`}
           key={`${track.bvid}-${track.cid}-${i}`}
           onClick={() => onPlayTrack(track)}>
           <div className="ep-recent-dot" />
