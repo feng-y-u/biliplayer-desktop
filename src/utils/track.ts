@@ -5,3 +5,7 @@ export function isTrackFavorited(track: Track, favorites: FavoriteFolder[]): boo
     f.tracks.some(t => t.bvid === track.bvid && t.cid === track.cid)
   );
 }
+
+export function isSameTrack(a: Pick<Track, 'bvid' | 'cid'>, b: Pick<Track, 'bvid' | 'cid'>): boolean {
+  return a.bvid === b.bvid && a.cid === b.cid;
+}
