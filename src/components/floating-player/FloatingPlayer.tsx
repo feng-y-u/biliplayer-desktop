@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ExpandedPanel from './ExpandedPanel';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
+import { PlayPauseIcon, NextIcon } from './Icons';
 import './FloatingPlayer.css';
 import type { CollapsedState, PlayerState, PlaylistState, PlayMode, WindowPosition, WindowSize, Track, FavoriteFolder } from '@/types';
 
@@ -305,15 +306,10 @@ export default function FloatingPlayer({
         <>
           <div className="hover-bar">
             <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayPause(); }} title="播放/暂停">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                {playerState.isPlaying
-                  ? <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
-                  : <path d="M8 5v14l11-7z" />
-                }
-              </svg>
+              <PlayPauseIcon isPlaying={playerState.isPlaying} />
             </button>
             <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onNext(); }} title="下一首">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+              <NextIcon />
             </button>
             <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayModeChange(nextMode(playlistState.playMode)); }} title={modeTitle(playlistState.playMode)}>
               <ModeIcon mode={playlistState.playMode} />

@@ -6,6 +6,7 @@ import Playlist from './Playlist';
 import FavoritesTab from './FavoritesTab';
 import RecentTab from './RecentTab';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
+import { PlayPauseIcon, NextIcon } from './Icons';
 import type { Track, PlayMode, FavoriteFolder, CurrentAudio } from '@/types';
 import { formatDuration } from '@/utils/format';
 
@@ -138,15 +139,10 @@ export default function ExpandedPanel({
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
           </button>
           <button className="ep-play-btn" onClick={playerActions.onPlayPause} title="播放/暂停">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              {isPlaying
-                ? <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>
-                : <path d="M8 5v14l11-7z" />
-              }
-            </svg>
+            <PlayPauseIcon isPlaying={isPlaying} />
           </button>
           <button className="ep-ctrl-btn" onClick={playerActions.onNext} title="下一首">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+            <NextIcon />
           </button>
         </div>
 
