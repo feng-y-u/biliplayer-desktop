@@ -12,3 +12,5 @@ docs/
 debug*.txt
 lastrun.log
 procs_*.txt
+
+dist-electron/
