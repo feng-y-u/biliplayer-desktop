@@ -21,8 +21,7 @@ app.commandLine.appendSwitch('disable-gpu-cache');
 const store = new Store<{
   volume: number;
   playMode: 'loop' | 'single' | 'shuffle';
-  playlist: any[];
-  currentIndex: number;
+  playlist: { tracks: any[]; currentIndex: number };
   favorites: any[];
   recentTracks: any[];
   windowPosition: { left: number; top: number };

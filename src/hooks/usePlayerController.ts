@@ -52,30 +52,14 @@ export function usePlayerController({
 }: UsePlayerControllerOpts) {
   const [loading, setLoading] = [playlist.loading, playlist.setLoading];
 
-  const handleNext = () => {
-    if (playlist.tracks.length === 0) return null;
-    let nextIndex: number;
-    if (playlist.playMode === 'single') nextIndex = playlist.currentIndex;
-    else if (playlist.playMode === 'shuffle') nextIndex = Math.floor(Math.random() * playlist.tracks.length);
-    else nextIndex = (playlist.currentIndex + 1) % playlist.tracks.length;
-    playlist.setCurrentIndex(nextIndex);
-    return nextIndex;
-  };
-
-  const handlePrev = () => {
-    if (playlist.tracks.length === 0) return null;
-    const prevIndex = playlist.currentIndex - 1 < 0 ? playlist.tracks.length - 1 : playlist.currentIndex - 1;
-    playlist.setCurrentIndex(prevIndex);
-    return prevIndex;
-  };
-
   const handlePlayPause = useCallback(() => {
     if (!currentAudio && playlist.tracks[playlist.currentIndex]) {
       playTrack(playlist.tracks[playlist.currentIndex]!);
-    } else {
+    } else if (isPlaying) {
       playPause();
     }
-  }, [currentAudio, playlist.tracks, playlist.currentIndex, playTrack, playPause]);
+    // 如果 !currentAudio && isPlaying (歌曲自然结束但状态未更新)，不操作
+  }, [currentAudio, playlist.tracks, playlist.currentIndex, isPlaying, playTrack, playPause]);
 
   const addTrackToPlaylistAndPlay = useCallback(async (track: Track) => {
     const newIndex = playlist.tracks.length;
@@ -151,18 +135,25 @@ export function usePlayerController({
   }, [playlist, setLoading, showNotification]);
 
   const handleNextButton = useCallback(async () => {
-    const nextIndex = handleNext();
-    if (nextIndex !== null && playlist.tracks[nextIndex]) {
+    if (playlist.tracks.length === 0) return;
+    let nextIndex: number;
+    if (playlist.playMode === 'single') nextIndex = playlist.currentIndex;
+    else if (playlist.playMode === 'shuffle') nextIndex = Math.floor(Math.random() * playlist.tracks.length);
+    else nextIndex = (playlist.currentIndex + 1) % playlist.tracks.length;
+    playlist.setCurrentIndex(nextIndex);
+    if (playlist.tracks[nextIndex]) {
       await playTrack(playlist.tracks[nextIndex]!);
     }
-  }, [playlist.tracks, playTrack]);
+  }, [playlist.currentIndex, playlist.playMode, playlist.tracks, playTrack]);
 
   const handlePrevButton = useCallback(async () => {
-    const prevIndex = handlePrev();
-    if (prevIndex !== null && playlist.tracks[prevIndex]) {
+    if (playlist.tracks.length === 0) return;
+    const prevIndex = playlist.currentIndex - 1 < 0 ? playlist.tracks.length - 1 : playlist.currentIndex - 1;
+    playlist.setCurrentIndex(prevIndex);
+    if (playlist.tracks[prevIndex]) {
       await playTrack(playlist.tracks[prevIndex]!);
     }
-  }, [playlist.tracks, playTrack]);
+  }, [playlist.currentIndex, playlist.tracks, playTrack]);
 
   return {
     handlePlayPause,

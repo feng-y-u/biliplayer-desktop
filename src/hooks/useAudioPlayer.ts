@@ -125,12 +125,12 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
         isPlaying: true,
         currentTime: 0,
         duration: prev.duration || 0,
-        volume: state.volume,
+        volume: prev.volume,
         currentAudio: { bvid: track.bvid, cid: track.cid, title: track.title, author: track.author, cover: track.cover },
       }));
     }
     return result.success;
-  }, [state.volume]);
+  }, []);
 
   const seek = useCallback(async (time: number) => {
     seekAudioLocal(time);

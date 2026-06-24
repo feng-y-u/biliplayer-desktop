@@ -89,6 +89,7 @@ export default function FloatingPlayer({
     width: 400,
     height: 600,
   });
+  const latestResizeRef = useRef<{ width: number; height: number }>({ width: 400, height: 600 });
 
   // Clear expand animation after 250ms
   useEffect(() => {
@@ -180,6 +181,7 @@ export default function FloatingPlayer({
       }
 
       const newSize = { width: newW, height: newH };
+      latestResizeRef.current = newSize;
       window.electronAPI.windowResize(newW, newH);
       storage.setWindowSize(newSize);
     }
@@ -189,10 +191,7 @@ export default function FloatingPlayer({
       resizeSession.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      lastExpandedSizeRef.current = {
-        width: storage.windowSize.width,
-        height: storage.windowSize.height,
-      };
+      lastExpandedSizeRef.current = { ...latestResizeRef.current };
     }
 
     window.addEventListener('mousemove', onResizeMove);

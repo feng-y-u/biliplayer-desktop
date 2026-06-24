@@ -66,7 +66,7 @@ export default function Playlist({
         const isActive = index === currentIndex;
         return (
           <div
-            key={`${track.bvid}-${index}`}
+            key={`${track.bvid}-${track.cid}`}
             className={`playlist-item${isActive ? ' active' : ''}`}
             data-no-drag
             draggable={!!onReorderTracks}
