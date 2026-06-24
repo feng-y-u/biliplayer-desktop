@@ -11,34 +11,19 @@
   overflow: hidden;
 }
 
-/* ── Collapsed → expanded scale animation ── */
-.float-player.expanded .expanded-panel {
-  animation: panelExpand 0.25s ease-out forwards;
+/* ── Panel transition (expand/collapse) ── */
+.expanded-panel {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  opacity: 1;
+  transform: scale(1);
 }
-@keyframes panelExpand {
-  from {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+.float-player.animating-expand .expanded-panel {
+  opacity: 0;
+  transform: scale(0.3);
 }
-
-/* ── Collapse animation ── */
-.float-player.collapsing .expanded-panel {
-  animation: panelCollapse 0.2s ease-in forwards;
-}
-@keyframes panelCollapse {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.3);
-  }
+.float-player.animating-collapse .expanded-panel {
+  opacity: 0;
+  transform: scale(0.3);
 }
 
 /* ── Notification toast ── */

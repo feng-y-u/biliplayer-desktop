@@ -85,6 +85,20 @@ export default function FloatingPlayer({
   } | null>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const waitForTransitionEnd = useCallback((el: HTMLElement | null, eventName: string): Promise<void> => {
+    return new Promise(resolve => {
+      if (el) {
+        const handler = () => {
+          el.removeEventListener(eventName, handler);
+          resolve();
+        };
+        el.addEventListener(eventName, handler, { once: true });
+      } else {
+        resolve();
+      }
+    });
+  }, []);
   const lastExpandedSizeRef = useRef<{ width: number; height: number }>({
     width: 400,
     height: 600,
@@ -98,12 +112,12 @@ export default function FloatingPlayer({
     return () => clearTimeout(timer);
   }, [animating]);
 
-  // Sync window size when user drags resize handles (only when expanded)
+  // Sync window size when user drags resize handles (only when expanded, not during animating)
   useEffect(() => {
-    if (collapsedState !== 'expanded') return;
+    if (collapsedState !== 'expanded' || animating) return;
     window.electronAPI.windowResize(storage.windowSize.width, storage.windowSize.height);
     window.electronAPI.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
-  }, [storage.windowSize, collapsedState]);
+  }, [storage.windowSize, collapsedState, animating]);
 
   // Set initial window size (collapsed) and restore saved position on mount
   useEffect(() => {
@@ -209,6 +223,34 @@ export default function FloatingPlayer({
     };
   }, []);
 
+  // Handle collapse transition end
+  useEffect(() => {
+    const el = containerRef.current;
+    if (animating === 'collapse') {
+      // Fallback timer in case transitionend doesn't fire (e.g. reduced motion)
+      const fallbackTimer = setTimeout(() => {
+        const api = window.electronAPI;
+        const pos = collapsedPosRef.current;
+        if (pos) api.windowMove(pos.x, pos.y);
+        api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
+        api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
+        setCollapsedState('collapsed');
+        setAnimating(null);
+      }, 300);
+
+      waitForTransitionEnd(el, 'transitionend').then(() => {
+        clearTimeout(fallbackTimer);
+        const api = window.electronAPI;
+        const pos = collapsedPosRef.current;
+        if (pos) api.windowMove(pos.x, pos.y);
+        api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
+        api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
+        setCollapsedState('collapsed');
+        setAnimating(null);
+      });
+    }
+  }, [animating, waitForTransitionEnd]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     // In expanded state, only start drag from the top bar
     if (collapsedState === 'expanded') {
@@ -239,18 +281,7 @@ export default function FloatingPlayer({
   }, [storage.windowSize]);
 
   const collapseWindow = useCallback(() => {
-    const api = window.electronAPI;
-    const pos = collapsedPosRef.current;
     setAnimating('collapse');
-    if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
-    collapseTimerRef.current = setTimeout(() => {
-      if (pos) api.windowMove(pos.x, pos.y);
-      api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
-      api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
-      setCollapsedState('collapsed');
-      setAnimating(null);
-      collapseTimerRef.current = null;
-    }, 200);
   }, []);
 
   const handleThumbClick = useCallback(async () => {
@@ -270,15 +301,25 @@ export default function FloatingPlayer({
       let expandedY = pos.y;
       expandedX = Math.max(20, Math.min(expandedX, window.screen.width - targetW - 20));
       expandedY = Math.max(20, Math.min(expandedY, window.screen.height - targetH - 20));
+
+      // Step 1: Render panel (hidden with opacity:0, scale:0.3)
+      setCollapsedState('expanded');
       setAnimating('expand');
+
+      // Step 2: Expand window so panel is visible inside it
       api.windowMove(expandedX, expandedY);
       api.windowResize(targetW, targetH);
       api.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
-      setCollapsedState('expanded');
+
+      // Step 3: Trigger CSS transition to animate from hidden → visible
+      // Use rAF to ensure the browser has painted the initial hidden state
+      requestAnimationFrame(() => {
+        setAnimating(null);
+      });
     } else {
       collapseWindow();
     }
-  }, [collapsedState, storage.windowSize, collapseWindow]);
+  }, [collapsedState, storage.windowSize]);
 
   const handleClose = useCallback(() => {
     collapseWindow();
@@ -290,7 +331,8 @@ export default function FloatingPlayer({
       className={[
         'float-player',
         collapsedState === 'expanded' && 'expanded',
-        animating === 'collapse' && 'collapsing',
+        animating === 'expand' && 'animating-expand',
+        animating === 'collapse' && 'animating-collapse',
         playerState.isPlaying && 'playing',
       ].filter(Boolean).join(' ')}
       onMouseDown={handleMouseDown}

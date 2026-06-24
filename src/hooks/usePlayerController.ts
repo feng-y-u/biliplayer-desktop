@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { Track, CurrentAudio, PlayMode } from '@/types';
-import { pauseAudioLocal, getVideoInfo, getPlaylist } from '@/services/api';
+import { pauseAudioLocal, resumeAudioLocal, getVideoInfo, getPlaylist } from '@/services/api';
 
 interface PlaylistStore {
   tracks: Track[];
@@ -57,8 +57,9 @@ export function usePlayerController({
       playTrack(playlist.tracks[playlist.currentIndex]!);
     } else if (isPlaying) {
       playPause();
+    } else {
+      resumeAudioLocal();
     }
-    // 如果 !currentAudio && isPlaying (歌曲自然结束但状态未更新)，不操作
   }, [currentAudio, playlist.tracks, playlist.currentIndex, isPlaying, playTrack, playPause]);
 
   const addTrackToPlaylistAndPlay = useCallback(async (track: Track) => {
