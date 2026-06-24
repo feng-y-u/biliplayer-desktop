@@ -23,15 +23,12 @@ describe('formatDuration', () => {
     expect(formatDuration(Infinity)).toBe('--:--');
   });
 
-  // ⚠️ 已知 bug：0 被当作 falsy 返回 '--:--'
-  // 期望：formatDuration(0) === '0:00'
-  // 实际：formatDuration(0) === '--:--'
-  it('[BUG] zero returns --:-- instead of 0:00', () => {
-    expect(formatDuration(0)).toBe('--:--');
+  it('formats zero as 0:00', () => {
+    expect(formatDuration(0)).toBe('0:00');
   });
 
-  // ⚠️ 已知 bug：负数没有过滤
-  it('[BUG] negative values produce invalid output', () => {
-    expect(formatDuration(-1)).toBe('-1:-1');
+  it('handles negative values', () => {
+    expect(formatDuration(-1)).toBe('--:--');
+    expect(formatDuration(-60)).toBe('--:--');
   });
 });
