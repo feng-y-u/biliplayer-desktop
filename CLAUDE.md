@@ -2,6 +2,48 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Guiding Principles
+
+When working in this codebase, apply these principles:
+
+- **Simplicity first**: Write minimum code that solves the problem. No speculative abstractions, no unused flexibility.
+- **Surgical changes**: Touch only what the task requires. Don't improve adjacent code or refactor things that aren't broken.
+- **Goal-driven execution**: Define verifiable success criteria before starting work. Loop until verified.
+- **Teach, don't just do**: When guiding users through complex operations, explain the "why" behind each step. Use metaphors when helpful to make concepts more accessible.
+
+## CodeGraph
+
+This project has a CodeGraph MCP server (`codegraph_*` tools) configured. CodeGraph is a tree-sitter-parsed knowledge graph of every symbol, edge, and file. Reads are sub-millisecond and return structural information grep cannot.
+
+### When to prefer codegraph over native search
+
+Use codegraph for **structural** questions — what calls what, what would break, where is X defined, what is X's signature. Use native grep/read only for **literal text** queries (string contents, comments, log messages) or after you already have a specific file open.
+
+| Question | Tool |
+|---|---|
+| "Where is X defined?" / "Find symbol named X" | `codegraph_search` |
+| "What calls function Y?" | `codegraph_callers` |
+| "What does Y call?" | `codegraph_callees` |
+| "What would break if I changed Z?" | `codegraph_impact` |
+| "Show me Y's signature / source / docstring" | `codegraph_node` |
+| "Give me focused context for a task/area" | `codegraph_context` |
+| "See several related symbols' source at once" | `codegraph_explore` |
+| "What files exist under path/" | `codegraph_files` |
+| "Is the index healthy?" | `codegraph_status` |
+
+### Rules of thumb
+
+- **Answer directly — don't delegate exploration.** For "how does X work" / architecture / trace questions, answer with 2-3 codegraph calls: `codegraph_context` first, then ONE `codegraph_explore` for the source of the symbols it surfaces. Codegraph IS the pre-built index, so spawning a separate file-reading sub-task/agent — or running a grep + read loop — repeats work codegraph already did and costs more for the same answer.
+- **Trust codegraph results.** They come from a full AST parse. Do NOT re-verify them with grep — that's slower, less accurate, and wastes context.
+- **Don't grep first** when looking up a symbol by name. `codegraph_search` is faster and returns kind + location + signature in one call.
+- **Don't chain `codegraph_search` + `codegraph_node`** when you just want context — `codegraph_context` is one call.
+- **Don't loop `codegraph_node` over many symbols** — one `codegraph_explore` call returns several symbols' source grouped in a single capped call, while each separate node/Read call re-reads the whole context and costs far more.
+- **Index lag**: the file watcher debounces ~500ms behind writes; don't re-query immediately after editing a file in the same turn.
+
+### If `.codegraph/` doesn't exist
+
+The MCP server returns "not initialized." Ask the user: *"I notice this project doesn't have CodeGraph initialized. Want me to run `codegraph init -i` to build the index?"*
+
 ## Commands
 
 ```bash
@@ -197,15 +239,42 @@ dev.mjs                 # manual dev launcher
 
 ## Gotchas
 
-- **Parallel reference file**: `AGENTS.md` contains a similar but more concise overview. When in doubt, trust CLAUDE.md for detailed guidance.
+### Critical workflow issues
 
-- ExpandedPanel's `currentAudio` prop uses `CurrentAudio` which is `Pick<Track, 'bvid' | 'cid' | 'title' | 'author' | 'cover'>` — missing `duration`. Defined in `types/index.ts`. This is a separate type from the full `Track` interface.
-- `electron-store` schema defined as a generic type param `Store<{...}>` in `electron/main.ts:21-30` — the schema types are never shared with the renderer, so type vs. actual usage mismatches cause silent runtime errors.
-- `windowStore` uses a debounced batch writer (100ms flush window) for `store:set` calls — state updates during rapid events (e.g., window resize) are coalesced, but the 100ms delay means IPC writes lag slightly behind React state.
-- The `loading` state is consumed by the add-button disabled state in ExpandedPanel but not by most other components.
-- Bilibili API uses `media_id` (not `fid`) in the favorites endpoint. The playlist URL parser in `main.ts` handles both `medialist/play/dlista/{seasonId}/{mid}` and `space.bilibili.com/{mid}/favlist?fid={seasonId}` formats.
-- `utils/format.ts`: `formatDuration(0)` returns `'0:00'`, negative values return `'--:--'`.
-- `Track.duration` is optional (`duration?: number`) — always handle the undefined case.
-- Hardware acceleration is disabled (`app.disableHardwareAcceleration()`) + GPU cache disabled — this is intentional for the always-on-top overlay window.
-- Window bounds (position) are persisted to `electron-store` on close; size is persisted on resize.
-- **README.md is stale** — references non-existent files (`useStorage.ts`, `usePlaylist.ts`, `design-tokens.css`) and an outdated directory layout. Trust the structure in this file instead.
+- **Preload files must be synced manually**: `electron/preload.ts` is the typechecked source; `electron/preload.cjs` is the runtime CJS variant copied during build/dev. Both must be edited in sync. Forgetting this causes silent runtime failures — the renderer won't be able to communicate with the main process.
+- **electron-store schema is in main only**: The schema is defined as a generic type param in `electron/main.ts:21-30` and never shared with the renderer. Type mismatches between main and renderer cause silent runtime errors — verify types match before making changes.
+- **README.md is stale**: References non-existent files (`useStorage.ts`, `usePlaylist.ts`, `vite.config.electron.ts`) and an outdated directory layout. Always trust CLAUDE.md's directory structure instead.
+
+### Audio & playback behavior
+
+- **Bilibili audio URLs expire in ~10 minutes**: The codebase handles this with two mechanisms:
+  1. `useAudioPlayer.ts` refreshes proactively every 60s while playing
+  2. `api.ts` checks if current URL is within 5 min of expiry and clears it to force re-fetch
+  If playback suddenly fails, check whether the URL refresh logic is working correctly.
+- **Global audio element is a singleton**: `src/services/api.ts` has a module-level `HTMLAudioElement` and URL cache (`currentUrl`, `currentExpiresAt`). All playback controls operate on this single instance. Be very careful when modifying playback logic — state changes are implicit and affect all callers.
+
+### Type and data handling
+
+- **`CurrentAudio` is not `Track`**: `ExpandedPanel` uses `CurrentAudio` which is `Pick<Track, 'bvid' | 'cid' | 'title' | 'author' | 'cover'>` — it's missing `duration`. Always handle the undefined case for `duration` in any component that receives `CurrentAudio`.
+- **`Track.duration` is optional**: Even when you have a full `Track`, `duration` may be undefined.
+- **noUncheckedIndexedAccess is enabled**: Array/object indexing returns `T | undefined`. Use `!` assertions only when you're certain the value exists (e.g., regex captures, known-length arrays). Prefer explicit checks otherwise.
+
+### UI and window behavior
+
+- **Hardware acceleration is disabled**: This is intentional for the always-on-top overlay window. `app.disableHardwareAcceleration()` and GPU cache disabled in main.ts. Don't try to re-enable it.
+- **Window size and position have different persistence timing**: Position is persisted on window close; size is persisted immediately on resize (debounced 100ms).
+- **`windowStore` uses debounced batch writes**: IPC writes lag 100ms behind React state. This is intentional to avoid overwhelming the store during rapid resize events.
+
+### Bilibili API quirks
+
+- **Favorites endpoint uses `media_id`, not `fid`**: The playlist URL parser in `main.ts:125-131` handles both URL formats, but the API call itself must use `media_id`.
+- **Bilibili CDN requires Referer header**: `webRequest.onBeforeSendHeaders` in main.ts injects `Referer: https://www.bilibili.com/` for all `*.hdslb.com`, `*.bilivideo.com`, and `*.bilibili.com` requests. Without this, CDN requests fail.
+
+### Dev environment
+
+- **F12 opens DevTools in dev mode only**: Registered via `globalShortcut` in main.ts. In production builds, F12 does nothing.
+- **`react-draggable` is unused**: It's in `package.json` but the app implements custom drag in `FloatingPlayer.tsx`. Don't use it.
+
+## Reference files
+
+- **`AGENTS.md`**: Contains a similar but more concise overview of this codebase. Use it as a quick reference when you need a refresher on the main points. When in doubt, trust CLAUDE.md for detailed guidance.
