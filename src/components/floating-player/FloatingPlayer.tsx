@@ -327,7 +327,7 @@ export default function FloatingPlayer({
       ref={containerRef}
       className={[
         'float-player',
-        collapsedState === 'expanded' && 'expanded',
+        collapsedState === 'expanded' && animating !== 'expand' && 'expanded',
         animating === 'expand' && 'animating-expand',
         animating === 'collapse' && 'animating-collapse',
         playerState.isPlaying && 'playing',
