@@ -13,17 +13,8 @@
 
 /* ── Panel transition (expand/collapse) ── */
 .expanded-panel {
-  transition: opacity 0.25s ease, transform 0.25s ease;
   opacity: 1;
   transform: scale(1);
-}
-.float-player.animating-expand .expanded-panel {
-  opacity: 0;
-  transform: scale(0.3);
-}
-.float-player.animating-collapse .expanded-panel {
-  opacity: 0;
-  transform: scale(0.3);
 }
 
 /* ── Notification toast ── */
