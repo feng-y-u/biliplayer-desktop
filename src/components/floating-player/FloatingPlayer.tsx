@@ -71,6 +71,7 @@ export default function FloatingPlayer({
   notification,
 }: FloatingPlayerProps) {
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
+  const [showThumb, setShowThumb] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const didDrag = useRef(false);
   const dragSession = useRef<{
@@ -262,7 +263,9 @@ export default function FloatingPlayer({
     const currentW = storage.windowSize.width;
     const currentH = storage.windowSize.height;
 
-    // 用 rAF 逐帧收缩窗口（250ms，与 exit 动画时长对齐）
+    // 隐藏缩略图，等 exit 动画完成后再显示
+    setShowThumb(false);
+
     const duration = 250;
     let start_time: number | null = null;
 
@@ -270,14 +273,13 @@ export default function FloatingPlayer({
       if (!start_time) start_time = timestamp;
       const elapsed = timestamp - start_time;
       const t = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3); // ease-out
+      const eased = 1 - Math.pow(1 - t, 3);
       const w = Math.round(lerp(currentW, THUMB_WIDTH, eased));
       const h = Math.round(lerp(currentH, THUMB_HEIGHT, eased));
       api.windowResize(w, h);
       if (t < 1) {
         requestAnimationFrame(animateCollapse);
       } else {
-        // 动画结束，恢复到折叠位置
         if (collapsedPosRef.current) {
           api.windowMove(collapsedPosRef.current.x, collapsedPosRef.current.y);
         }
@@ -287,7 +289,6 @@ export default function FloatingPlayer({
     };
     requestAnimationFrame(animateCollapse);
 
-    // 触发 AnimatePresence exit 动画
     setCollapsedState('collapsed');
   }, [storage.windowSize]);
 
@@ -342,7 +343,7 @@ export default function FloatingPlayer({
       ].filter(Boolean).join(' ')}
       onMouseDown={handleMouseDown}
     >
-      <AnimatePresence>
+      <AnimatePresence onExitComplete={() => setShowThumb(true)}>
         {collapsedState === 'expanded' && (
           <motion.div
             key="panel"
@@ -386,7 +387,7 @@ export default function FloatingPlayer({
         )}
       </AnimatePresence>
 
-      {collapsedState !== 'expanded' && (
+      {collapsedState !== 'expanded' && showThumb && (
         <>
           <div className="hover-bar">
             <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayPause(); }} title="播放/暂停">
