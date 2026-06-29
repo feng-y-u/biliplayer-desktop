@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, useMotionValue, AnimatePresence } from 'framer-motion';
 import ExpandedPanel from './ExpandedPanel';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
@@ -201,6 +201,13 @@ export default function FloatingPlayer({
     };
   }, [storage.setWindowSize]);
 
+  // DOM 更新后立即显示面板（浏览器绘制前）
+  useLayoutEffect(() => {
+    if (collapsedState === 'expanded') {
+      setPanelReady(true);
+    }
+  }, [collapsedState]);
+
   // 窗口大小与动画进度同步（展开时）
   useEffect(() => {
     let rafId: number;
@@ -355,7 +362,6 @@ export default function FloatingPlayer({
             exit={{ opacity: 0, scale: 0.3 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
             style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
-            onAnimationStart={() => setPanelReady(true)}
             onAnimationComplete={(def) => {
               if (def === 'animate') {
                 const api = window.electronAPI;
