@@ -347,7 +347,7 @@ export default function FloatingPlayer({
         {collapsedState === 'expanded' && (
           <motion.div
             key="panel"
-            className="motion-panel"
+            initial={{ opacity: 0, scale: 0.3 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.3 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
