@@ -218,6 +218,16 @@ export default function FloatingPlayer({
     return () => clearTimeout(timer);
   }, [animating]);
 
+  // Collapse: set collapsedState after animation completes
+  useEffect(() => {
+    if (animating !== 'collapse') return;
+    const timer = setTimeout(() => {
+      setCollapsedState('collapsed');
+      setAnimating(null);
+    }, SPRING_DURATION);
+    return () => clearTimeout(timer);
+  }, [animating]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (collapsedState === 'expanded') {
       const target = e.target as HTMLElement;
