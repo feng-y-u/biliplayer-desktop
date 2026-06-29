@@ -72,6 +72,7 @@ export default function FloatingPlayer({
 }: FloatingPlayerProps) {
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const [showThumb, setShowThumb] = useState(true);
+  const [panelReady, setPanelReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const didDrag = useRef(false);
   const dragSession = useRef<{
@@ -323,6 +324,7 @@ export default function FloatingPlayer({
 
       // 触发 framer-motion 动画
       progress.set(0);
+      setPanelReady(false);
       setCollapsedState('expanded');
     } else {
       collapseWindow();
@@ -343,6 +345,7 @@ export default function FloatingPlayer({
       ].filter(Boolean).join(' ')}
       onMouseDown={handleMouseDown}
     >
+      <div style={{ opacity: panelReady ? 1 : 0, width: '100%', height: '100%' }}>
       <AnimatePresence onExitComplete={() => setShowThumb(true)}>
         {collapsedState === 'expanded' && (
           <motion.div
@@ -352,6 +355,7 @@ export default function FloatingPlayer({
             exit={{ opacity: 0, scale: 0.3 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
             style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
+            onAnimationStart={() => setPanelReady(true)}
             onAnimationComplete={(def) => {
               if (def === 'animate') {
                 const api = window.electronAPI;
@@ -386,6 +390,7 @@ export default function FloatingPlayer({
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
       {collapsedState !== 'expanded' && showThumb && (
         <>
