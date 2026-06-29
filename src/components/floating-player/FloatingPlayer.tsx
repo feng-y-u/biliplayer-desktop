@@ -93,6 +93,8 @@ export default function FloatingPlayer({
     height: 600,
   });
   const progress = useMotionValue(0);
+  const animStartRef = useRef({ w: THUMB_WIDTH, h: THUMB_HEIGHT });
+  const animTargetRef = useRef({ w: THUMB_WIDTH, h: THUMB_HEIGHT });
 
   // Sync window size when user drags resize handles (only when expanded)
   useEffect(() => {
@@ -200,15 +202,13 @@ export default function FloatingPlayer({
   // 窗口大小与动画进度同步（展开时）
   useEffect(() => {
     let rafId: number;
-    let startW = THUMB_WIDTH;
-    let startH = THUMB_HEIGHT;
-    let targetW = THUMB_WIDTH;
-    let targetH = THUMB_HEIGHT;
 
     const tick = () => {
       const p = progress.get();
-      const w = Math.round(lerp(startW, targetW, p));
-      const h = Math.round(lerp(startH, targetH, p));
+      const start = animStartRef.current;
+      const target = animTargetRef.current;
+      const w = Math.round(lerp(start.w, target.w, p));
+      const h = Math.round(lerp(start.h, target.h, p));
       window.electronAPI.windowResize(w, h);
       if (p > 0 && p < 1) {
         rafId = requestAnimationFrame(tick);
@@ -315,6 +315,10 @@ export default function FloatingPlayer({
       // 先移动窗口到展开位置
       api.windowMove(expandedX, expandedY);
       api.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
+
+      // 设置动画起始/目标尺寸
+      animStartRef.current = { w: THUMB_WIDTH, h: THUMB_HEIGHT };
+      animTargetRef.current = { w: targetW, h: targetH };
 
       // 触发 framer-motion 动画
       progress.set(0);
