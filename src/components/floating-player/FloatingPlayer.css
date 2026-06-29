@@ -10,9 +10,6 @@
   border-radius: var(--radius);
   overflow: hidden;
 }
-.float-player.expanding {
-  opacity: 0;
-}
 
 /* ── Panel transition (expand/collapse) ── */
 .expanded-panel {

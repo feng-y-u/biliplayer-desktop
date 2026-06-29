@@ -72,7 +72,6 @@ export default function FloatingPlayer({
 }: FloatingPlayerProps) {
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const [showThumb, setShowThumb] = useState(true);
-  const [expanding, setExpanding] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const didDrag = useRef(false);
   const dragSession = useRef<{
@@ -324,9 +323,7 @@ export default function FloatingPlayer({
 
       // 触发 framer-motion 动画
       progress.set(0);
-      setExpanding(true);
       setCollapsedState('expanded');
-      requestAnimationFrame(() => setExpanding(false));
     } else {
       collapseWindow();
     }
@@ -342,7 +339,6 @@ export default function FloatingPlayer({
       className={[
         'float-player',
         collapsedState === 'expanded' && 'expanded',
-        expanding && 'expanding',
         playerState.isPlaying && 'playing',
       ].filter(Boolean).join(' ')}
       onMouseDown={handleMouseDown}
@@ -351,10 +347,10 @@ export default function FloatingPlayer({
         {collapsedState === 'expanded' && (
           <motion.div
             key="panel"
-            initial={{ opacity: 0, scale: 0.3 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.3 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
             onAnimationComplete={(def) => {
               if (def === 'animate') {
