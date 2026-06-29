@@ -72,6 +72,7 @@ export default function FloatingPlayer({
 }: FloatingPlayerProps) {
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const [showThumb, setShowThumb] = useState(true);
+  const [expanding, setExpanding] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const didDrag = useRef(false);
   const dragSession = useRef<{
@@ -323,7 +324,9 @@ export default function FloatingPlayer({
 
       // 触发 framer-motion 动画
       progress.set(0);
+      setExpanding(true);
       setCollapsedState('expanded');
+      requestAnimationFrame(() => setExpanding(false));
     } else {
       collapseWindow();
     }
@@ -339,6 +342,7 @@ export default function FloatingPlayer({
       className={[
         'float-player',
         collapsedState === 'expanded' && 'expanded',
+        expanding && 'expanding',
         playerState.isPlaying && 'playing',
       ].filter(Boolean).join(' ')}
       onMouseDown={handleMouseDown}
