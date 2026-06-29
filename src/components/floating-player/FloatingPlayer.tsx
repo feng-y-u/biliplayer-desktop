@@ -95,6 +95,7 @@ export default function FloatingPlayer({
   const animStartRef = useRef({ w: THUMB_WIDTH, h: THUMB_HEIGHT });
   const animTargetRef = useRef({ w: THUMB_WIDTH, h: THUMB_HEIGHT });
   const collapseRafRef = useRef<number>(0);
+  const expandStartTimeRef = useRef(0);
 
   // Sync window size when user drags resize handles
   useEffect(() => {
@@ -193,14 +194,14 @@ export default function FloatingPlayer({
   useEffect(() => {
     if (animating !== 'expand') return;
     let rafId: number;
+    expandStartTimeRef.current = performance.now();
     const tick = () => {
-      const p = Math.min((performance.now() - (animStartRef.current as unknown as number)) / SPRING_DURATION, 1);
+      const p = Math.min((performance.now() - expandStartTimeRef.current) / SPRING_DURATION, 1);
       const w = Math.round(lerp(animStartRef.current.w, animTargetRef.current.w, p));
       const h = Math.round(lerp(animStartRef.current.h, animTargetRef.current.h, p));
       window.electronAPI.windowResize(w, h);
       if (p < 1) rafId = requestAnimationFrame(tick);
     };
-    (animStartRef as unknown as { current: number }).current = performance.now();
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
   }, [animating]);
@@ -279,7 +280,6 @@ export default function FloatingPlayer({
         }
         api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
         api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
-        setAnimating(null);
       }
     };
     cancelAnimationFrame(collapseRafRef.current);
