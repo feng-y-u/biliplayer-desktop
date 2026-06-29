@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { motion, useMotionValue, AnimatePresence } from 'framer-motion';
 import ExpandedPanel from './ExpandedPanel';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
 import { PlayPauseIcon, NextIcon } from './Icons';
@@ -12,6 +13,10 @@ const PANEL_MIN_WIDTH = 320;
 const PANEL_MIN_HEIGHT = 480;
 const DRAG_THRESHOLD = 5;
 const MIN_WINDOW_SIZE = { width: 1, height: 1 };
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
 
 interface FloatingPlayerProps {
   storage: {
@@ -66,7 +71,6 @@ export default function FloatingPlayer({
   notification,
 }: FloatingPlayerProps) {
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
-  const [animating, setAnimating] = useState<'expand' | 'collapse' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const didDrag = useRef(false);
   const dragSession = useRef<{
@@ -84,40 +88,18 @@ export default function FloatingPlayer({
     edge: 'e' | 'se' | 's';
   } | null>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
-  const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const waitForTransitionEnd = useCallback((el: HTMLElement | null, eventName: string): Promise<void> => {
-    return new Promise(resolve => {
-      if (el) {
-        const handler = () => {
-          el.removeEventListener(eventName, handler);
-          resolve();
-        };
-        el.addEventListener(eventName, handler, { once: true });
-      } else {
-        resolve();
-      }
-    });
-  }, []);
-  const lastExpandedSizeRef = useRef<{ width: number; height: number }>({
+  const expandedSizeRef = useRef<{ width: number; height: number }>({
     width: 400,
     height: 600,
   });
-  const latestResizeRef = useRef<{ width: number; height: number }>({ width: 400, height: 600 });
+  const progress = useMotionValue(0);
 
-  // Clear expand animation after 250ms
+  // Sync window size when user drags resize handles (only when expanded)
   useEffect(() => {
-    if (animating !== 'expand') return;
-    const timer = setTimeout(() => setAnimating(null), 250);
-    return () => clearTimeout(timer);
-  }, [animating]);
-
-  // Sync window size when user drags resize handles (only when expanded, not during animating)
-  useEffect(() => {
-    if (collapsedState !== 'expanded' || animating) return;
+    if (collapsedState !== 'expanded') return;
     window.electronAPI.windowResize(storage.windowSize.width, storage.windowSize.height);
     window.electronAPI.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
-  }, [storage.windowSize, collapsedState, animating]);
+  }, [storage.windowSize, collapsedState]);
 
   // Set initial window size (collapsed) and restore saved position on mount
   useEffect(() => {
@@ -195,7 +177,7 @@ export default function FloatingPlayer({
       }
 
       const newSize = { width: newW, height: newH };
-      latestResizeRef.current = newSize;
+      expandedSizeRef.current = newSize;
       window.electronAPI.windowResize(newW, newH);
       storage.setWindowSize(newSize);
     }
@@ -205,7 +187,6 @@ export default function FloatingPlayer({
       resizeSession.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      lastExpandedSizeRef.current = { ...latestResizeRef.current };
     }
 
     window.addEventListener('mousemove', onResizeMove);
@@ -216,40 +197,36 @@ export default function FloatingPlayer({
     };
   }, [storage.setWindowSize]);
 
-  // Cleanup collapse timer on unmount
+  // 窗口大小与动画进度同步（展开时）
   useEffect(() => {
-    return () => {
-      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    let rafId: number;
+    let startW = THUMB_WIDTH;
+    let startH = THUMB_HEIGHT;
+    let targetW = THUMB_WIDTH;
+    let targetH = THUMB_HEIGHT;
+
+    const tick = () => {
+      const p = progress.get();
+      const w = Math.round(lerp(startW, targetW, p));
+      const h = Math.round(lerp(startH, targetH, p));
+      window.electronAPI.windowResize(w, h);
+      if (p > 0 && p < 1) {
+        rafId = requestAnimationFrame(tick);
+      }
     };
-  }, []);
 
-  // Handle collapse transition end
-  useEffect(() => {
-    const el = containerRef.current;
-    if (animating === 'collapse') {
-      // Fallback timer in case transitionend doesn't fire (e.g. reduced motion)
-      const fallbackTimer = setTimeout(() => {
-        const api = window.electronAPI;
-        const pos = collapsedPosRef.current;
-        if (pos) api.windowMove(pos.x, pos.y);
-        api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
-        api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
-        setCollapsedState('collapsed');
-        setAnimating(null);
-      }, 300);
+    const unsubscribe = progress.on('change', () => {
+      const p = progress.get();
+      if (p === 0 || p === 1) return;
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(tick);
+    });
 
-      waitForTransitionEnd(el, 'transitionend').then(() => {
-        clearTimeout(fallbackTimer);
-        const api = window.electronAPI;
-        const pos = collapsedPosRef.current;
-        if (pos) api.windowMove(pos.x, pos.y);
-        api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
-        api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
-        setCollapsedState('collapsed');
-        setAnimating(null);
-      });
-    }
-  }, [animating, waitForTransitionEnd]);
+    return () => {
+      unsubscribe();
+      cancelAnimationFrame(rafId);
+    };
+  }, [progress]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     // In expanded state, only start drag from the top bar
@@ -281,8 +258,38 @@ export default function FloatingPlayer({
   }, [storage.windowSize]);
 
   const collapseWindow = useCallback(() => {
-    setAnimating('collapse');
-  }, []);
+    const api = window.electronAPI;
+    const currentW = storage.windowSize.width;
+    const currentH = storage.windowSize.height;
+
+    // 用 rAF 逐帧收缩窗口（250ms，与 exit 动画时长对齐）
+    const duration = 250;
+    let start_time: number | null = null;
+
+    const animateCollapse = (timestamp: number) => {
+      if (!start_time) start_time = timestamp;
+      const elapsed = timestamp - start_time;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out
+      const w = Math.round(lerp(currentW, THUMB_WIDTH, eased));
+      const h = Math.round(lerp(currentH, THUMB_HEIGHT, eased));
+      api.windowResize(w, h);
+      if (t < 1) {
+        requestAnimationFrame(animateCollapse);
+      } else {
+        // 动画结束，恢复到折叠位置
+        if (collapsedPosRef.current) {
+          api.windowMove(collapsedPosRef.current.x, collapsedPosRef.current.y);
+        }
+        api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
+        api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
+      }
+    };
+    requestAnimationFrame(animateCollapse);
+
+    // 触发 AnimatePresence exit 动画
+    setCollapsedState('collapsed');
+  }, [storage.windowSize]);
 
   const handleThumbClick = useCallback(async () => {
     if (didDrag.current) {
@@ -290,11 +297,14 @@ export default function FloatingPlayer({
       return;
     }
     const api = window.electronAPI;
+
     if (collapsedState === 'collapsed') {
+      // 展开
       const pos = await api.windowGetPosition();
       collapsedPosRef.current = { x: pos.x, y: pos.y };
+
       const thumbCenterX = pos.x + THUMB_WIDTH / 2;
-      const remembered = lastExpandedSizeRef.current;
+      const remembered = expandedSizeRef.current;
       const targetW = Math.min(remembered.width, window.screen.width - 40);
       const targetH = Math.min(remembered.height, window.screen.height - 40);
       let expandedX = thumbCenterX - targetW / 2;
@@ -302,24 +312,17 @@ export default function FloatingPlayer({
       expandedX = Math.max(20, Math.min(expandedX, window.screen.width - targetW - 20));
       expandedY = Math.max(20, Math.min(expandedY, window.screen.height - targetH - 20));
 
-      // Step 1: Render panel (hidden with opacity:0, scale:0.3)
-      setCollapsedState('expanded');
-      setAnimating('expand');
-
-      // Step 2: Expand window so panel is visible inside it
+      // 先移动窗口到展开位置
       api.windowMove(expandedX, expandedY);
-      api.windowResize(targetW, targetH);
       api.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
 
-      // Step 3: Trigger CSS transition to animate from hidden → visible
-      // Use rAF to ensure the browser has painted the initial hidden state
-      requestAnimationFrame(() => {
-        setAnimating(null);
-      });
+      // 触发 framer-motion 动画
+      progress.set(0);
+      setCollapsedState('expanded');
     } else {
       collapseWindow();
     }
-  }, [collapsedState, storage.windowSize]);
+  }, [collapsedState, collapseWindow, progress]);
 
   const handleClose = useCallback(() => {
     collapseWindow();
@@ -331,8 +334,6 @@ export default function FloatingPlayer({
       className={[
         'float-player',
         collapsedState === 'expanded' && 'expanded',
-        animating === 'expand' && 'animating-expand',
-        animating === 'collapse' && 'animating-collapse',
         playerState.isPlaying && 'playing',
       ].filter(Boolean).join(' ')}
       onMouseDown={handleMouseDown}
@@ -360,33 +361,51 @@ export default function FloatingPlayer({
         </>
       )}
 
-      {collapsedState === 'expanded' && (
-        <div style={{ pointerEvents: animating !== null ? 'none' : 'auto', width: '100%', height: '100%' }}>
-          <ExpandedPanel
-            currentAudio={playerState.currentAudio}
-            currentTime={playerState.currentTime}
-            duration={playerState.duration}
-            isPlaying={playerState.isPlaying}
-            volume={playerState.volume}
-            tracks={playlistState.tracks}
-            currentIndex={playlistState.currentIndex}
-            playMode={playlistState.playMode}
-            favorites={storage.favorites}
-            recentTracks={storage.recentTracks}
-            playerActions={playerActions}
-            playlistActions={playlistActions}
-            favoriteActions={favoriteActions}
-            onClose={handleClose}
-            onInputSubmit={_onInputSubmit}
-            loading={loading}
-            notification={notification}
-          />
-          {/* Resize handles */}
-          <div className="resize-handle resize-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />
-          <div className="resize-handle resize-se" onMouseDown={(e) => handleResizeStart(e, 'se')} />
-          <div className="resize-handle resize-s" onMouseDown={(e) => handleResizeStart(e, 's')} />
-        </div>
-      )}
+      <AnimatePresence>
+        {collapsedState === 'expanded' && (
+          <motion.div
+            key="panel"
+            initial={{ opacity: 0, scale: 0.3 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.3 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
+            onAnimationComplete={(def) => {
+              // 展开动画完成时设置最终窗口尺寸
+              if (def === 'animate') {
+                const api = window.electronAPI;
+                const size = expandedSizeRef.current;
+                api.windowResize(size.width, size.height);
+                api.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
+              }
+            }}
+          >
+            <ExpandedPanel
+              currentAudio={playerState.currentAudio}
+              currentTime={playerState.currentTime}
+              duration={playerState.duration}
+              isPlaying={playerState.isPlaying}
+              volume={playerState.volume}
+              tracks={playlistState.tracks}
+              currentIndex={playlistState.currentIndex}
+              playMode={playlistState.playMode}
+              favorites={storage.favorites}
+              recentTracks={storage.recentTracks}
+              playerActions={playerActions}
+              playlistActions={playlistActions}
+              favoriteActions={favoriteActions}
+              onClose={handleClose}
+              onInputSubmit={_onInputSubmit}
+              loading={loading}
+              notification={notification}
+            />
+            {/* Resize handles */}
+            <div className="resize-handle resize-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />
+            <div className="resize-handle resize-se" onMouseDown={(e) => handleResizeStart(e, 'se')} />
+            <div className="resize-handle resize-s" onMouseDown={(e) => handleResizeStart(e, 's')} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
