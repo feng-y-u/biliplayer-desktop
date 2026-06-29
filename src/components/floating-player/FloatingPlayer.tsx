@@ -342,29 +342,6 @@ export default function FloatingPlayer({
       ].filter(Boolean).join(' ')}
       onMouseDown={handleMouseDown}
     >
-      {collapsedState !== 'expanded' && (
-        <>
-          <div className="hover-bar">
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayPause(); }} title="播放/暂停">
-              <PlayPauseIcon isPlaying={playerState.isPlaying} />
-            </button>
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onNext(); }} title="下一首">
-              <NextIcon />
-            </button>
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayModeChange(nextMode(playlistState.playMode)); }} title={modeTitle(playlistState.playMode)}>
-              <ModeIcon mode={playlistState.playMode} />
-            </button>
-          </div>
-          <div className={`player-thumb${playerState.isPlaying ? ' playing' : ''}`} onClick={handleThumbClick}>
-            {playerState.currentAudio?.cover ? (
-              <div className="thumb-inner" style={{ backgroundImage: `url(${playerState.currentAudio.cover})` }} />
-            ) : (
-              <span className="note-icon">♪</span>
-            )}
-          </div>
-        </>
-      )}
-
       <AnimatePresence>
         {collapsedState === 'expanded' && (
           <motion.div
@@ -375,7 +352,6 @@ export default function FloatingPlayer({
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
             style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
             onAnimationComplete={(def) => {
-              // 展开动画完成时设置最终窗口尺寸
               if (def === 'animate') {
                 const api = window.electronAPI;
                 const size = expandedSizeRef.current;
@@ -403,13 +379,35 @@ export default function FloatingPlayer({
               loading={loading}
               notification={notification}
             />
-            {/* Resize handles */}
             <div className="resize-handle resize-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />
             <div className="resize-handle resize-se" onMouseDown={(e) => handleResizeStart(e, 'se')} />
             <div className="resize-handle resize-s" onMouseDown={(e) => handleResizeStart(e, 's')} />
           </motion.div>
         )}
       </AnimatePresence>
+
+      {collapsedState !== 'expanded' && (
+        <>
+          <div className="hover-bar">
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayPause(); }} title="播放/暂停">
+              <PlayPauseIcon isPlaying={playerState.isPlaying} />
+            </button>
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onNext(); }} title="下一首">
+              <NextIcon />
+            </button>
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayModeChange(nextMode(playlistState.playMode)); }} title={modeTitle(playlistState.playMode)}>
+              <ModeIcon mode={playlistState.playMode} />
+            </button>
+          </div>
+          <div className={`player-thumb${playerState.isPlaying ? ' playing' : ''}`} onClick={handleThumbClick}>
+            {playerState.currentAudio?.cover ? (
+              <div className="thumb-inner" style={{ backgroundImage: `url(${playerState.currentAudio.cover})` }} />
+            ) : (
+              <span className="note-icon">♪</span>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
