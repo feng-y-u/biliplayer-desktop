@@ -338,6 +338,58 @@
   font-size: 12px;
 }
 
+.ep-fav-create-btn {
+  margin-top: 12px;
+  padding: 6px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.ep-fav-create-btn:hover {
+  background: var(--accent-hover);
+}
+
+.ep-fav-inline-input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--bg);
+  color: var(--fg);
+  outline: none;
+}
+.ep-fav-inline-input:focus {
+  border-color: var(--accent);
+}
+
+.ep-fav-inline-btn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--accent);
+  color: white;
+}
+.ep-fav-inline-btn:hover {
+  background: var(--accent-hover);
+}
+.ep-fav-inline-btn-cancel {
+  background: var(--surface-hover);
+  color: var(--fg-2);
+}
+.ep-fav-inline-btn-cancel:hover {
+  background: var(--border);
+}
+
 /* Favorites input row inside expanded folder */
 .ep-fav-input-row {
   display: flex;

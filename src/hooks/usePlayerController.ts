@@ -151,10 +151,10 @@ export function usePlayerController({
   const handlePrevButton = useCallback(async () => {
     if (playlist.tracks.length === 0) return;
     const prevIndex = playlist.currentIndex - 1 < 0 ? playlist.tracks.length - 1 : playlist.currentIndex - 1;
-    playlist.setCurrentIndex(prevIndex);
-    if (playlist.tracks[prevIndex]) {
-      await playTrack(playlist.tracks[prevIndex]!);
-    }
+    const track = playlist.tracks[prevIndex];
+    if (!track) return;
+    const ok = await playTrack(track);
+    if (ok) playlist.setCurrentIndex(prevIndex);
   }, [playlist.currentIndex, playlist.tracks, playTrack]);
 
   return {
