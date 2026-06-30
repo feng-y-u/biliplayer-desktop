@@ -10,7 +10,6 @@ const THUMB_HEIGHT = 64;
 const PANEL_MIN_WIDTH = 320;
 const PANEL_MIN_HEIGHT = 480;
 const DRAG_THRESHOLD = 5;
-const MIN_WINDOW_SIZE = { width: 1, height: 1 };
 const SPRING_DURATION = 200;
 
 function lerp(a: number, b: number, t: number): number {
@@ -102,7 +101,6 @@ export default function FloatingPlayer({
   useEffect(() => {
     if (collapsedState !== 'expanded' || animating) return;
     window.electronAPI.windowResize(storage.windowSize.width, storage.windowSize.height);
-    window.electronAPI.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
   }, [storage.windowSize, collapsedState, animating]);
 
   // Set initial window size and restore saved position on mount
@@ -224,7 +222,6 @@ export default function FloatingPlayer({
       const api = window.electronAPI;
       const size = expandedSizeRef.current;
       api.windowResize(size.width, size.height);
-      api.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
     }, SPRING_DURATION);
     return () => clearTimeout(timer);
   }, [animating]);
@@ -290,7 +287,6 @@ export default function FloatingPlayer({
         if (collapsedPosRef.current) {
           api.windowMove(collapsedPosRef.current.x, collapsedPosRef.current.y);
         }
-        api.windowSetMinimumSize(MIN_WINDOW_SIZE.width, MIN_WINDOW_SIZE.height);
         api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
       }
     };

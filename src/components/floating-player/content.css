@@ -111,86 +111,162 @@
   border-radius: 2px;
 }
 
+/* ── Favorites ── */
+
+.ep-fav-view {
+  padding: 8px 0 16px;
+}
+
 .ep-fav-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 12px 16px 24px;
+  gap: 6px;
+  padding: 8px 10px;
 }
+
 .ep-fav-card {
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 12px;
   cursor: pointer;
   transition: border-color 0.12s, box-shadow 0.12s;
+  overflow: hidden;
+  position: relative;
 }
 .ep-fav-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 2px 8px rgba(79, 110, 247, 0.1);
-}
-.ep-fav-card-expand {
-  padding: 0;
-  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(79, 110, 247, 0.08);
 }
 .ep-fav-card-expand.expanded {
   grid-column: 1 / -1;
 }
+
 .ep-fav-header {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
+  flex-direction: column;
+  padding: 0;
   cursor: pointer;
+  -webkit-app-region: no-drag;
 }
 .ep-fav-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-sm);
+  width: 100%;
+  aspect-ratio: 16 / 9;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
+  font-size: 22px;
   overflow: hidden;
+  color: white;
+  background: linear-gradient(135deg, #6366f1, #4f6ef7);
 }
+.ep-fav-header-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+.ep-fav-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
 .ep-fav-info {
   flex: 1;
   min-width: 0;
 }
+.ep-fav-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ep-fav-count {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
 .ep-fav-arrow {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--muted);
   transition: transform 0.15s;
+  flex-shrink: 0;
 }
 .ep-fav-arrow.open {
   transform: rotate(90deg);
 }
+
+.ep-fav-card-del, .ep-fav-card-add {
+  position: absolute;
+  top: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.ep-fav-card:hover .ep-fav-card-del,
+.ep-fav-card:hover .ep-fav-card-add {
+  opacity: 1;
+}
+.ep-fav-card-del {
+  right: 6px;
+  color: var(--muted);
+}
+.ep-fav-card-del:hover {
+  color: #e74c3c;
+}
+.ep-fav-card-add {
+  right: 28px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.ep-fav-card-add:hover {
+  color: var(--accent);
+}
+
+/* Expanded tracks */
 .ep-fav-tracks {
   border-top: 1px solid var(--border);
-  max-height: 300px;
+  background: var(--bg);
+  max-height: 280px;
   overflow-y: auto;
+  animation: favSlideDown 0.15s ease;
 }
-.ep-fav-tracks::-webkit-scrollbar {
-  width: 4px;
+@keyframes favSlideDown {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 280px; }
 }
-.ep-fav-tracks::-webkit-scrollbar-track {
-  background: transparent;
-}
-.ep-fav-tracks::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 2px;
-}
+.ep-fav-tracks::-webkit-scrollbar { width: 4px; }
+.ep-fav-tracks::-webkit-scrollbar-track { background: transparent; }
+.ep-fav-tracks::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
 .ep-fav-track {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 0.1s;
+  -webkit-app-region: no-drag;
 }
 .ep-fav-track:hover {
   background: var(--surface-hover);
+}
+.ep-fav-track:active {
+  background: var(--surface);
 }
 .ep-fav-track-info {
   flex: 1;
@@ -208,85 +284,197 @@
   color: var(--muted);
 }
 .ep-fav-track-del {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
-  background: none;
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
   font-size: 10px;
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 0.12s, color 0.12s;
+  transition: opacity 0.1s, background 0.1s, color 0.1s;
 }
 .ep-fav-track:hover .ep-fav-track-del {
   opacity: 1;
 }
 .ep-fav-track-del:hover {
+  background: rgba(239, 68, 68, 0.1);
   color: #e74c3c;
 }
 
-.ep-fav-card {
-  position: relative;
+/* New folder card */
+.ep-fav-new {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 12px;
+  border: 1.5px dashed var(--border);
+  background: transparent !important;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
 }
-
-.ep-fav-card-del {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+.ep-fav-new:hover {
+  border-color: var(--accent);
+  background: rgba(79, 110, 247, 0.03) !important;
+  box-shadow: none !important;
+}
+.ep-fav-new-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  background: var(--surface);
+  font-size: 18px;
+  font-weight: 600;
+  background: var(--bg);
   color: var(--muted);
-  cursor: pointer;
-  font-size: 10px;
-  opacity: 0;
-  transition: opacity 0.12s, color 0.12s;
-  z-index: 1;
+  border: 1.5px dashed var(--border);
+  transition: color 0.12s, border-color 0.12s;
 }
-.ep-fav-card:hover .ep-fav-card-del {
-  opacity: 1;
+.ep-fav-new:hover .ep-fav-new-icon {
+  color: var(--accent);
+  border-color: var(--accent);
 }
-.ep-fav-card-del:hover {
-  color: #e74c3c;
-}
-
-.ep-fav-card-add {
-  position: absolute;
-  top: 4px;
-  right: 28px;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: var(--surface);
+.ep-fav-new-label {
+  font-size: 11px;
+  font-weight: 500;
   color: var(--muted);
-  cursor: pointer;
-  font-size: 12px;
-  opacity: 0;
-  transition: opacity 0.12s, color 0.12s;
-  z-index: 1;
+  transition: color 0.12s;
 }
-.ep-fav-card:hover .ep-fav-card-add {
-  opacity: 1;
-}
-.ep-fav-card-add:hover {
+.ep-fav-new:hover .ep-fav-new-label {
   color: var(--accent);
 }
-.ep-fav-view {
+
+/* Create folder inline */
+.ep-fav-create-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
 }
+.ep-fav-create-inline input {
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  background: var(--surface);
+  color: var(--fg);
+  outline: none;
+}
+.ep-fav-create-inline input:focus {
+  border-color: var(--accent);
+}
+.ep-fav-create-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.ep-fav-create-btn {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s;
+  background: var(--accent);
+  color: white;
+}
+.ep-fav-create-btn:hover {
+  background: var(--accent-hover);
+}
+.ep-fav-create-btn-cancel {
+  background: transparent;
+  color: var(--muted);
+}
+.ep-fav-create-btn-cancel:hover {
+  background: var(--surface-hover);
+}
+
+/* Input row inside expanded folder */
+.ep-fav-input-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.ep-fav-input-row input {
+  flex: 1;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--surface);
+  color: var(--fg);
+  outline: none;
+}
+.ep-fav-input-row input:focus {
+  border-color: var(--accent);
+}
+.ep-fav-input-row button {
+  height: 28px;
+  padding: 0 10px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Empty state */
+.ep-fav-empty {
+  text-align: center;
+  padding: 48px 24px;
+}
+.ep-fav-empty-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}
+.ep-fav-empty-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-2);
+  margin-bottom: 4px;
+}
+.ep-fav-empty-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.ep-fav-empty-btn {
+  padding: 7px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: white;
+  transition: background 0.1s;
+}
+.ep-fav-empty-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* ── Recent ── */
 
 .ep-recent-list {
   padding: 4px 0;
@@ -338,93 +526,7 @@
   font-size: 12px;
 }
 
-.ep-fav-create-btn {
-  margin-top: 12px;
-  padding: 6px 16px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.ep-fav-create-btn:hover {
-  background: var(--accent-hover);
-}
-
-.ep-fav-inline-input {
-  width: 100%;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 11px;
-  background: var(--bg);
-  color: var(--fg);
-  outline: none;
-}
-.ep-fav-inline-input:focus {
-  border-color: var(--accent);
-}
-
-.ep-fav-inline-btn {
-  padding: 4px 12px;
-  border: none;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  background: var(--accent);
-  color: white;
-}
-.ep-fav-inline-btn:hover {
-  background: var(--accent-hover);
-}
-.ep-fav-inline-btn-cancel {
-  background: var(--surface-hover);
-  color: var(--fg-2);
-}
-.ep-fav-inline-btn-cancel:hover {
-  background: var(--border);
-}
-
-/* Favorites input row inside expanded folder */
-.ep-fav-input-row {
-  display: flex;
-  gap: 6px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-}
-.ep-fav-input-row input {
-  flex: 1;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 11px;
-  background: var(--bg);
-  color: var(--fg);
-  outline: none;
-}
-.ep-fav-input-row input:focus {
-  border-color: var(--accent);
-}
-.ep-fav-input-row button {
-  height: 28px;
-  padding: 0 10px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-/* Favorites dropdown in playlist */
+/* ── Favorites dropdown in playlist ── */
 .pl-fav-dropdown {
   position: absolute;
   top: 100%;

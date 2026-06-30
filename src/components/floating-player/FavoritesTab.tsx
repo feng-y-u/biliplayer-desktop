@@ -2,12 +2,10 @@ import { useState, useEffect } from 'react';
 import type { Track, FavoriteFolder } from '@/types';
 import { useDragReorder } from '@/hooks/useDragReorder';
 
-const FAV_ICON_SIZE = 80;
-
 function getFavIconStyle(fav: FavoriteFolder): React.CSSProperties {
   const cover = fav.tracks[0]?.cover;
   if (cover) {
-    return { backgroundImage: `url(${cover}@${FAV_ICON_SIZE}w_${FAV_ICON_SIZE}h.jpg)`, backgroundSize: 'cover', backgroundPosition: 'center' };
+    return { backgroundImage: `url(${cover}@320w_180h.jpg)`, backgroundSize: 'cover', backgroundPosition: 'center' };
   }
   return { background: fav.icon.length <= 2 ? 'var(--accent)' : fav.icon };
 }
@@ -54,33 +52,31 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
   return (
     <div className="ep-fav-view">
       {favorites.length === 0 ? (
-        <div className="ep-fav-view" style={{ padding: '40px 16px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px', marginBottom: '8px' }}>📁</div>
-          <div style={{ fontWeight: 500, marginBottom: '4px', color: 'var(--fg-2)' }}>还没有收藏夹</div>
-          <div style={{ fontSize: '11px', lineHeight: 1.6, marginBottom: '12px' }}>
+        <div className="ep-fav-empty">
+          <div className="ep-fav-empty-icon">📁</div>
+          <div className="ep-fav-empty-title">还没有收藏夹</div>
+          <div className="ep-fav-empty-desc">
             在播放列表中点击 ♡ 收藏歌曲
           </div>
           {showCreateInput ? (
-            <div className="ep-fav-input-row" style={{ maxWidth: '240px', margin: '0 auto' }}>
-              <input
-                type="text" placeholder="收藏夹名称" value={createName}
+            <div className="ep-fav-create-inline" style={{ maxWidth: '220px', margin: '0 auto' }}>
+              <input type="text" placeholder="收藏夹名称" value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && createName.trim()) {
-                    onCreateFavorite(createName.trim());
-                    setCreateName('');
-                    setShowCreateInput(false);
+                    onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false);
                   }
                   if (e.key === 'Escape') { setShowCreateInput(false); setCreateName(''); }
                 }}
                 autoFocus
               />
-              <button
-                onClick={() => { if (createName.trim()) { onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}
-              >确定</button>
+              <div className="ep-fav-create-actions">
+                <button className="ep-fav-create-btn" onClick={() => { if (createName.trim()) { onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
+                <button className="ep-fav-create-btn ep-fav-create-btn-cancel" onClick={() => { setShowCreateInput(false); setCreateName(''); }}>取消</button>
+              </div>
             </div>
           ) : (
-            <button className="ep-fav-create-btn" onClick={() => setShowCreateInput(true)}>+ 新建收藏夹</button>
+            <button className="ep-fav-empty-btn" onClick={() => setShowCreateInput(true)}>+ 新建收藏夹</button>
           )}
         </div>
       ) : (
@@ -89,13 +85,15 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
             <div className={`ep-fav-card ep-fav-card-expand${expandedId === fav.id ? ' expanded' : ''}`} key={fav.id}>
               <div className="ep-fav-header" onClick={() => toggleExpand(fav.id)}>
                 <div className="ep-fav-icon" style={getFavIconStyle(fav)}>
-                  {fav.tracks[0]?.cover ? null : (fav.icon.length <= 2 ? fav.icon : '♪')}
+                  {fav.tracks[0]?.cover ? null : <span className="ep-fav-emoji">{fav.icon.length <= 2 ? fav.icon : '♪'}</span>}
                 </div>
-                <div className="ep-fav-info">
-                  <div className="ep-fav-name">{fav.name}</div>
-                  <div className="ep-fav-meta">{fav.tracks.length} 首</div>
+                <div className="ep-fav-header-info">
+                  <div className="ep-fav-info">
+                    <div className="ep-fav-name">{fav.name}</div>
+                    <div className="ep-fav-count">{fav.tracks.length} 首</div>
+                  </div>
+                  <span className={`ep-fav-arrow${expandedId === fav.id ? ' open' : ''}`}>▸</span>
                 </div>
-                <span className={`ep-fav-arrow${expandedId === fav.id ? ' open' : ''}`}>▸</span>
               </div>
               {onDeleteFavorite && (
                 <button
@@ -168,8 +166,8 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
             </div>
           ))}
           {showCreateInput ? (
-            <div className="ep-fav-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <input className="ep-fav-inline-input" type="text" placeholder="收藏夹名称" value={createName}
+            <div className="ep-fav-create-inline">
+              <input type="text" placeholder="收藏夹名称" value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && createName.trim()) {
@@ -179,15 +177,15 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
                 }}
                 autoFocus
               />
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button className="ep-fav-inline-btn" onClick={() => { if (createName.trim()) { onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
-                <button className="ep-fav-inline-btn ep-fav-inline-btn-cancel" onClick={() => { setShowCreateInput(false); setCreateName(''); }}>取消</button>
+              <div className="ep-fav-create-actions">
+                <button className="ep-fav-create-btn" onClick={() => { if (createName.trim()) { onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
+                <button className="ep-fav-create-btn ep-fav-create-btn-cancel" onClick={() => { setShowCreateInput(false); setCreateName(''); }}>取消</button>
               </div>
             </div>
           ) : (
             <div className="ep-fav-card ep-fav-new" onClick={() => setShowCreateInput(true)}>
-              <div className="ep-fav-icon" style={{ background: 'var(--border)', borderStyle: 'dashed', borderColor: 'var(--muted)' }}>+</div>
-              <div className="ep-fav-name" style={{ color: 'var(--muted)' }}>新建收藏夹</div>
+              <div className="ep-fav-new-icon">+</div>
+              <div className="ep-fav-new-label">新建收藏夹</div>
             </div>
           )}
         </div>
