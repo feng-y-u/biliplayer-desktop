@@ -67,7 +67,21 @@ export async function playAudioLocal(bvid: string, cid: number, _title: string) 
     const result = await loadAudioTrack(bvid, cid);
     if (!result) return { success: false, error: 'Failed to load audio' };
     const audio = ensureAudio();
-    if (audio.src !== result.url) audio.src = result.url;
+    if (audio.src !== result.url) {
+      audio.src = result.url;
+      if (audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+        await new Promise<void>((resolve, reject) => {
+          const onCanPlay = () => { cleanup(); resolve(); };
+          const onError = () => { cleanup(); reject(new Error('Audio load failed')); };
+          const cleanup = () => {
+            audio.removeEventListener('canplay', onCanPlay);
+            audio.removeEventListener('error', onError);
+          };
+          audio.addEventListener('canplay', onCanPlay);
+          audio.addEventListener('error', onError);
+        });
+      }
+    }
     await audio.play();
     return { success: true };
   } catch (e) {

@@ -11,7 +11,7 @@ const PANEL_MIN_WIDTH = 320;
 const PANEL_MIN_HEIGHT = 480;
 const DRAG_THRESHOLD = 5;
 const MIN_WINDOW_SIZE = { width: 1, height: 1 };
-const SPRING_DURATION = 300;
+const SPRING_DURATION = 200;
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -240,9 +240,11 @@ export default function FloatingPlayer({
   }, [animating]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
     if (collapsedState === 'expanded') {
-      const target = e.target as HTMLElement;
       if (!target.closest('.ep-top-bar')) return;
+      // 不拦截 data-no-drag 内部的点击（关闭按钮等）
+      if (target.closest('[data-no-drag]')) return;
     }
     dragSession.current = {
       startScreenX: e.screenX,

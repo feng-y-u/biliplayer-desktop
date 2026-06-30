@@ -54,7 +54,8 @@ export function usePlayerController({
 
   const handlePlayPause = useCallback(() => {
     if (!currentAudio && playlist.tracks[playlist.currentIndex]) {
-      playTrack(playlist.tracks[playlist.currentIndex]!);
+      const track = playlist.tracks[playlist.currentIndex]!;
+      playTrack(track).then(ok => { if (ok) playlist.setCurrentIndex(playlist.currentIndex); });
     } else if (isPlaying) {
       playPause();
     } else {
@@ -141,10 +142,10 @@ export function usePlayerController({
     if (playlist.playMode === 'single') nextIndex = playlist.currentIndex;
     else if (playlist.playMode === 'shuffle') nextIndex = Math.floor(Math.random() * playlist.tracks.length);
     else nextIndex = (playlist.currentIndex + 1) % playlist.tracks.length;
-    playlist.setCurrentIndex(nextIndex);
-    if (playlist.tracks[nextIndex]) {
-      await playTrack(playlist.tracks[nextIndex]!);
-    }
+    const track = playlist.tracks[nextIndex];
+    if (!track) return;
+    const ok = await playTrack(track);
+    if (ok) playlist.setCurrentIndex(nextIndex);
   }, [playlist.currentIndex, playlist.playMode, playlist.tracks, playTrack]);
 
   const handlePrevButton = useCallback(async () => {

@@ -60,7 +60,7 @@
   background-size: cover;
   background-position: center;
   filter: blur(20px);
-  opacity: 0.5;
+  opacity: 0.6;
   transform: scale(1.2);
   pointer-events: none;
 }
@@ -114,9 +114,12 @@
   color: var(--muted);
 }
 
-/* Expanded panel drag: top bar is the handle */
-.expanded-panel .ep-top-bar {
+/* Expanded panel drag: only the title area is the handle */
+.expanded-panel .ep-top-bar h3 {
   -webkit-app-region: drag;
+}
+.expanded-panel .ep-top-bar .ep-top-btns {
+  -webkit-app-region: no-drag;
 }
 .expanded-panel [data-no-drag],
 .expanded-panel [data-no-drag] * {
