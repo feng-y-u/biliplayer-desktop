@@ -92,6 +92,7 @@ export default function FloatingPlayer({
     width: 400,
     height: 600,
   });
+  const expandParamsRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
   const animStartRef = useRef({ w: THUMB_WIDTH, h: THUMB_HEIGHT });
   const animTargetRef = useRef({ w: THUMB_WIDTH, h: THUMB_HEIGHT });
   const collapseRafRef = useRef<number>(0);
@@ -206,6 +207,15 @@ export default function FloatingPlayer({
     return () => cancelAnimationFrame(rafId);
   }, [animating]);
 
+  // React 提交 DOM、thumb 已移除后再移动窗口位置
+  useEffect(() => {
+    if (animating !== 'expand') return;
+    const p = expandParamsRef.current;
+    if (!p) return;
+    const api = window.electronAPI;
+    api.windowMove(p.x, p.y);
+  }, [animating]);
+
   // Expand: animate expand then stop
   useEffect(() => {
     if (animating !== 'expand') return;
@@ -305,9 +315,7 @@ export default function FloatingPlayer({
       expandedX = Math.max(20, Math.min(expandedX, window.screen.width - targetW - 20));
       expandedY = Math.max(20, Math.min(expandedY, window.screen.height - targetH - 20));
 
-      api.windowMove(expandedX, expandedY);
-      api.windowSetMinimumSize(PANEL_MIN_WIDTH, PANEL_MIN_HEIGHT);
-
+      expandParamsRef.current = { x: expandedX, y: expandedY, w: targetW, h: targetH };
       animStartRef.current = { w: THUMB_WIDTH, h: THUMB_HEIGHT };
       animTargetRef.current = { w: targetW, h: targetH };
 

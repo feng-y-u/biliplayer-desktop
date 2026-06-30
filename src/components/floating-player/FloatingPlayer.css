@@ -75,7 +75,7 @@
 .player-thumb {
   width: 56px;
   height: 56px;
-  border-radius: 50%;
+  border-radius: 12px;
   overflow: hidden;
   cursor: grab;
   background: linear-gradient(135deg, #6366f1, #4f6ef7);
@@ -93,27 +93,15 @@
 .player-thumb:active {
   cursor: grabbing;
 }
-.player-thumb.playing {
-  animation: spin 8s linear infinite;
-}
 .thumb-inner {
   width: 100%;
   height: 100%;
   background-size: cover;
   background-position: center;
-  will-change: transform;
 }
 .player-thumb .note-icon {
   color: white;
   font-size: 22px;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.player-thumb.playing .thumb-inner {
-  animation: spin 8s linear infinite;
 }
 
 .hover-bar {
