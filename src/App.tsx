@@ -117,34 +117,6 @@ function App() {      //数据
         }}
         playerState={playerState}
         playlistState={{ tracks: playlist.tracks, currentIndex: playlist.currentIndex, playMode: playlist.playMode }}
-        playerActions={{
-          onPlayPause: playerCtrl.handlePlayPause,
-          onPrev: playerCtrl.handlePrevButton,
-          onNext: playerCtrl.handleNextButton,
-          onSeek: seek,
-          onVolumeChange: volumeChange,
-          onPlayModeChange: playlist.setPlayMode,
-        }}
-        playlistActions={{
-          onPlayTrack: playerCtrl.handlePlayTrack,
-          onDeleteTrack: playerCtrl.handleDeleteTrack,
-          onClearPlaylist: playerCtrl.handleClearPlaylist,
-          onReorderTracks: playerCtrl.handleReorderTracks,
-        }}
-        favoriteActions={{
-          onCreateFavorite: favActions.handleCreateFavorite,
-          onToggleFavorite: favActions.handleToggleFavorite,
-          onAddToFavorite: favActions.handleAddToFavorite,
-          onAddToFavoriteFromInput: favActions.handleAddToFavoriteFromInput,
-          onPlayFromFavorite: favActions.handlePlayFromFavorite,
-          onRemoveFromFavorite: favActions.handleRemoveFromFavorite,
-          onDeleteFavorite: favActions.handleDeleteFavorite,
-          onReorderFavTracks: favActions.handleReorderFavTracks,
-          onAddAllToPlaylist: favActions.handleAddAllToPlaylist,
-        }}
-        onInputSubmit={playerCtrl.handleInputSubmit}
-        loading={playerCtrl.loading}
-        notification={notification}
       />
     </PlayerContext.Provider>
   );

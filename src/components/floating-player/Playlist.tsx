@@ -4,6 +4,7 @@ import type { Track, FavoriteFolder } from '@/types';
 import { formatDuration } from '@/utils/format';
 import { isTrackFavorited } from '@/utils/track';
 import { useDragReorder } from '@/hooks/useDragReorder';
+import { usePlayerContext } from '@/contexts/PlayerContext';
 
 const THUMBNAIL_SIZE = 40;
 
@@ -14,9 +15,6 @@ interface PlaylistProps {
   favorites: FavoriteFolder[];
   onPlayTrack: (index: number) => void;
   onDeleteTrack: (index: number) => void;
-  onToggleFavorite: (track: Track) => void;
-  onAddToFavorite?: (favId: string, track: Track) => void;
-  onReorderTracks?: (fromIndex: number, toIndex: number) => void;
 }
 
 export default function Playlist({
@@ -26,14 +24,12 @@ export default function Playlist({
   favorites,
   onPlayTrack,
   onDeleteTrack,
-  onToggleFavorite,
-  onAddToFavorite,
-  onReorderTracks,
 }: PlaylistProps) {
+  const ctx = usePlayerContext();
   const [dropdownTrackIdx, setDropdownTrackIdx] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { handleDragStart, handleDragOver, handleDragLeave, handleDrop, handleDragEnd } = useDragReorder({
-    onReorder: (from, to) => onReorderTracks?.(from, to),
+    onReorder: (from, to) => ctx.onReorderTracks(from, to),
   });
 
   // Close dropdown on click outside
@@ -69,7 +65,7 @@ export default function Playlist({
             key={`${track.bvid}-${track.cid}`}
             className={`playlist-item${isActive ? ' active' : ''}`}
             data-no-drag
-            draggable={!!onReorderTracks}
+            draggable
             onDragStart={() => handleDragStart(index)}
             onDragOver={(e) => handleDragOver(e, index)}
             onDragLeave={handleDragLeave}
@@ -101,16 +97,14 @@ export default function Playlist({
               <div className="pl-artist">{track.author}</div>
             </div>
             <span className="pl-dur">{formatDuration(track.duration)}</span>
-            {onToggleFavorite && (
-              <button
+            <button
                 className={`pl-fav-btn${isTrackFavorited(track, favorites) ? ' favorited' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onToggleFavorite(track); }}
+                onClick={(e) => { e.stopPropagation(); ctx.onToggleFavorite(track); }}
                 title={isTrackFavorited(track, favorites) ? '取消收藏' : '收藏'}
               >
                 {isTrackFavorited(track, favorites) ? '♥' : '♡'}
               </button>
-            )}
-            {onAddToFavorite && favorites.length > 0 && (
+            {favorites.length > 0 && (
               <div className="pl-fav-dropdown-wrapper" style={{ position: 'relative', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                 <button
                   className="pl-fav-dropdown-toggle"
@@ -120,7 +114,7 @@ export default function Playlist({
                 {dropdownTrackIdx === index && (
                   <div className="pl-fav-dropdown" ref={dropdownRef}>
                     {favorites.map(f => (
-                      <div key={f.id} className="pl-fav-dropdown-item" onClick={() => { onAddToFavorite(f.id, track); setDropdownTrackIdx(null); }}>
+                      <div key={f.id} className="pl-fav-dropdown-item" onClick={() => { ctx.onAddToFavorite(f.id, track); setDropdownTrackIdx(null); }}>
                         <span className="pl-fav-dropdown-item-name">{f.name}</span>
                         <span className="pl-fav-dropdown-item-count">{f.tracks.length} 首</span>
                       </div>

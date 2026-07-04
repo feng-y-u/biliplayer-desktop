@@ -5,8 +5,9 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import ExpandedPanel from './ExpandedPanel';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
 import { PlayPauseIcon, NextIcon } from './Icons';
+import { usePlayerContext } from '@/contexts/PlayerContext';
 import './FloatingPlayer.css';
-import type { CollapsedState, PlayerState, PlaylistState, PlayMode, WindowPosition, WindowSize, Track, FavoriteFolder } from '@/types';
+import type { CollapsedState, PlayerState, PlaylistState, WindowPosition, WindowSize, Track, FavoriteFolder } from '@/types';
 
 const THUMB_WIDTH = 64;
 const THUMB_HEIGHT = 64;
@@ -22,47 +23,14 @@ interface FloatingPlayerProps {
   };
   playerState: PlayerState;
   playlistState: PlaylistState;
-  playerActions: {
-    onPlayPause: () => void;
-    onPrev: () => void;
-    onNext: () => void;
-    onSeek: (time: number) => void;
-    onVolumeChange: (v: number) => void;
-    onPlayModeChange: (mode: PlayMode) => void;
-  };
-  playlistActions: {
-    onPlayTrack: (index: number) => void;
-    onDeleteTrack: (index: number) => void;
-    onClearPlaylist: () => void;
-    onReorderTracks: (fromIndex: number, toIndex: number) => void;
-  };
-  favoriteActions: {
-    onCreateFavorite: (name: string) => void;
-    onToggleFavorite: (track: Track) => void;
-    onPlayFromFavorite: (track: Track) => void;
-    onRemoveFromFavorite: (favId: string, trackIndex: number) => void;
-    onDeleteFavorite: (favId: string) => void;
-    onReorderFavTracks: (favId: string, fromIndex: number, toIndex: number) => void;
-    onAddToFavorite?: (favId: string, track: Track) => void;
-    onAddToFavoriteFromInput?: (favId: string, input: string) => Promise<void>;
-    onAddAllToPlaylist?: (tracks: Track[]) => void;
-  };
-  onInputSubmit: (input: string) => void;
-  loading: boolean;
-  notification: string | null;
 }
 
 export default function FloatingPlayer({
   storage,
   playerState,
   playlistState,
-  playerActions,
-  playlistActions,
-  favoriteActions,
-  onInputSubmit: _onInputSubmit,
-  loading,
-  notification,
 }: FloatingPlayerProps) {
+  const ctx = usePlayerContext();
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const containerRef = useRef<HTMLDivElement>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -160,13 +128,13 @@ export default function FloatingPlayer({
       {collapsedState !== 'expanded' && (
         <>
           <div className="hover-bar">
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayPause(); }} title="播放/暂停">
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); ctx.onPlayPause(); }} title="播放/暂停">
               <PlayPauseIcon isPlaying={playerState.isPlaying} />
             </button>
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onNext(); }} title="下一首">
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); ctx.onNext(); }} title="下一首">
               <NextIcon />
             </button>
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); playerActions.onPlayModeChange(nextMode(playlistState.playMode)); }} title={modeTitle(playlistState.playMode)}>
+            <button data-no-drag onClick={(e) => { e.stopPropagation(); ctx.onPlayModeChange(nextMode(playlistState.playMode)); }} title={modeTitle(playlistState.playMode)}>
               <ModeIcon mode={playlistState.playMode} />
             </button>
           </div>
@@ -193,13 +161,7 @@ export default function FloatingPlayer({
             playMode={playlistState.playMode}
             favorites={storage.favorites}
             recentTracks={storage.recentTracks}
-            playerActions={playerActions}
-            playlistActions={playlistActions}
-            favoriteActions={favoriteActions}
             onClose={handleClose}
-            onInputSubmit={_onInputSubmit}
-            loading={loading}
-            notification={notification}
           />
           {collapsedState === 'expanded' && (
             <>

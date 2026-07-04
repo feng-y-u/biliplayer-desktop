@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import type { Track, FavoriteFolder } from '@/types';
+import type { FavoriteFolder } from '@/types';
 import { useDragReorder } from '@/hooks/useDragReorder';
+import { usePlayerContext } from '@/contexts/PlayerContext';
 
 function getFavIconStyle(fav: FavoriteFolder): React.CSSProperties {
   const cover = fav.tracks[0]?.cover;
@@ -12,16 +13,10 @@ function getFavIconStyle(fav: FavoriteFolder): React.CSSProperties {
 
 interface FavoritesTabProps {
   favorites: FavoriteFolder[];
-  onCreateFavorite: (name: string) => void;
-  onPlayTrack: (track: Track) => void;
-  onRemoveTrack?: (favId: string, trackIndex: number) => void;
-  onDeleteFavorite?: (favId: string) => void;
-  onReorderTracks?: (favId: string, fromIndex: number, toIndex: number) => void;
-  onAddToFavoriteFromInput?: (favId: string, input: string) => Promise<void>;
-  onAddAllToPlaylist?: (tracks: Track[]) => void;
 }
 
-export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack, onRemoveTrack, onDeleteFavorite, onReorderTracks, onAddToFavoriteFromInput, onAddAllToPlaylist }: FavoritesTabProps) {
+export default function FavoritesTab({ favorites }: FavoritesTabProps) {
+  const ctx = usePlayerContext();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [addingToFavId, setAddingToFavId] = useState<string | null>(null);
@@ -43,8 +38,8 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
   const { handleDragStart, handleDragOver, handleDragLeave, handleDrop, handleDragEnd } =
     useDragReorder<string>({
       onReorder: (_from, _to, favId) => {
-        if (onReorderTracks && favId) {
-          onReorderTracks(favId, _from, _to);
+        if (favId) {
+          ctx.onReorderFavTracks(favId, _from, _to);
         }
       },
     });
@@ -64,14 +59,14 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
                 onChange={(e) => setCreateName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && createName.trim()) {
-                    onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false);
+                    ctx.onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false);
                   }
                   if (e.key === 'Escape') { setShowCreateInput(false); setCreateName(''); }
                 }}
                 autoFocus
               />
               <div className="ep-fav-create-actions">
-                <button className="ep-fav-create-btn" onClick={() => { if (createName.trim()) { onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
+                <button className="ep-fav-create-btn" onClick={() => { if (createName.trim()) { ctx.onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
                 <button className="ep-fav-create-btn ep-fav-create-btn-cancel" onClick={() => { setShowCreateInput(false); setCreateName(''); }}>取消</button>
               </div>
             </div>
@@ -95,24 +90,21 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
                   <span className={`ep-fav-arrow${expandedId === fav.id ? ' open' : ''}`}>▸</span>
                 </div>
               </div>
-              {onDeleteFavorite && (
-                <button
-                  className="ep-fav-card-del"
-                  onClick={(e) => { e.stopPropagation(); if (confirm(`删除收藏夹「${fav.name}」？`)) onDeleteFavorite(fav.id); }}
-                  title="删除收藏夹"
-                >✕</button>
-              )}
-              {onAddAllToPlaylist && fav.tracks.length > 0 && (
+              <button
+                className="ep-fav-card-del"
+                onClick={(e) => { e.stopPropagation(); if (confirm(`删除收藏夹「${fav.name}」？`)) ctx.onDeleteFavorite(fav.id); }}
+                title="删除收藏夹"
+              >✕</button>
+              {fav.tracks.length > 0 && (
                 <button
                   className="ep-fav-card-add"
-                  onClick={(e) => { e.stopPropagation(); onAddAllToPlaylist(fav.tracks); }}
+                  onClick={(e) => { e.stopPropagation(); ctx.onAddAllToPlaylist(fav.tracks); }}
                   title="添加到播放列表"
                 >+</button>
               )}
               {expandedId === fav.id && (
                 <div className="ep-fav-tracks">
-                  {onAddToFavoriteFromInput && (
-                    <div className="ep-fav-input-row" onClick={(e) => e.stopPropagation()}>
+                  <div className="ep-fav-input-row" onClick={(e) => e.stopPropagation()}>
                       <input type="text" placeholder="BV 号或收藏夹链接" value={addingToFavId === fav.id ? inputValue : ''}
                         onChange={(e) => { setAddingToFavId(fav.id); setInputValue(e.target.value); }}
                         onKeyDown={async (e) => {
@@ -120,7 +112,7 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
                           if (e.key === 'Enter' && val) {
                             setInputValue('');
                             setLoadingFavId(fav.id);
-                            try { await onAddToFavoriteFromInput(fav.id, val); } finally { setLoadingFavId(null); }
+                            try { await ctx.onAddToFavoriteFromInput(fav.id, val); } finally { setLoadingFavId(null); }
                           }
                         }}
                       />
@@ -129,32 +121,29 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
                         if (val) {
                           setInputValue('');
                           setLoadingFavId(fav.id);
-                          try { await onAddToFavoriteFromInput(fav.id, val); } finally { setLoadingFavId(null); }
+                          try { await ctx.onAddToFavoriteFromInput(fav.id, val); } finally { setLoadingFavId(null); }
                         }
                       }}>
                         {loadingFavId === fav.id ? <><span className="ep-spinner" />加载中</> : '添加'}
                       </button>
                     </div>
-                  )}
                   {fav.tracks.length > 0 ? fav.tracks.map((track, ti) => (
                     <div className="ep-fav-track" key={`${track.bvid}-${track.cid}`}
-                      draggable={!!onReorderTracks}
+                      draggable
                       onDragStart={() => handleDragStart(ti, fav.id)}
                       onDragOver={(e) => handleDragOver(e, ti)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, ti)}
                       onDragEnd={handleDragEnd}
                     >
-                      <div className="ep-fav-track-info" onClick={() => onPlayTrack(track)}>
+                      <div className="ep-fav-track-info" onClick={() => ctx.onPlayFromFavorite(track)}>
                         <div className="ep-fav-track-title" title={track.title}>{track.title}</div>
                         <div className="ep-fav-track-artist">{track.author}</div>
                       </div>
-                      {onRemoveTrack && (
-                        <button className="ep-fav-track-del" onClick={(e) => {
+                      <button className="ep-fav-track-del" onClick={(e) => {
                           e.stopPropagation();
-                          onRemoveTrack(fav.id, ti);
+                          ctx.onRemoveFromFavorite(fav.id, ti);
                         }} title="移出收藏夹">✕</button>
-                      )}
                     </div>
                   )) : (
                     <div className="ep-empty" style={{ padding: '16px 12px' }}>
@@ -171,14 +160,14 @@ export default function FavoritesTab({ favorites, onCreateFavorite, onPlayTrack,
                 onChange={(e) => setCreateName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && createName.trim()) {
-                    onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false);
+                    ctx.onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false);
                   }
                   if (e.key === 'Escape') { setShowCreateInput(false); setCreateName(''); }
                 }}
                 autoFocus
               />
               <div className="ep-fav-create-actions">
-                <button className="ep-fav-create-btn" onClick={() => { if (createName.trim()) { onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
+                <button className="ep-fav-create-btn" onClick={() => { if (createName.trim()) { ctx.onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
                 <button className="ep-fav-create-btn ep-fav-create-btn-cancel" onClick={() => { setShowCreateInput(false); setCreateName(''); }}>取消</button>
               </div>
             </div>
