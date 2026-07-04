@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { usePlaylistStore } from './stores/playlistStore';
 import { useFavoritesStore } from './stores/favoritesStore';
 import { useWindowStore } from './stores/windowStore';
@@ -7,6 +7,7 @@ import { useAudioPlayer } from './hooks/useAudioPlayer';
 import { usePlayerController } from './hooks/usePlayerController';
 import { useFavoriteActions } from './hooks/useFavoriteActions';
 import FloatingPlayer from '@/components/floating-player/FloatingPlayer';
+import { PlayerContext } from './contexts/PlayerContext';
 
 const NOTIFICATION_TIMEOUT_MS = 3000;
 
@@ -78,47 +79,74 @@ function App() {      //数据
     showNotification,
   });
 
+  const playerContextValue = useMemo(() => ({
+    onPlayPause: playerCtrl.handlePlayPause,
+    onPrev: playerCtrl.handlePrevButton,
+    onNext: playerCtrl.handleNextButton,
+    onSeek: seek,
+    onVolumeChange: volumeChange,
+    onPlayModeChange: playlist.setPlayMode,
+    onPlayTrack: playerCtrl.handlePlayTrack,
+    onDeleteTrack: playerCtrl.handleDeleteTrack,
+    onClearPlaylist: playerCtrl.handleClearPlaylist,
+    onReorderTracks: playerCtrl.handleReorderTracks,
+    onCreateFavorite: favActions.handleCreateFavorite,
+    onToggleFavorite: favActions.handleToggleFavorite,
+    onAddToFavorite: favActions.handleAddToFavorite,
+    onAddToFavoriteFromInput: favActions.handleAddToFavoriteFromInput,
+    onPlayFromFavorite: favActions.handlePlayFromFavorite,
+    onRemoveFromFavorite: favActions.handleRemoveFromFavorite,
+    onDeleteFavorite: favActions.handleDeleteFavorite,
+    onReorderFavTracks: favActions.handleReorderFavTracks,
+    onAddAllToPlaylist: favActions.handleAddAllToPlaylist,
+    onInputSubmit: playerCtrl.handleInputSubmit,
+    loading: playerCtrl.loading,
+    notification,
+  }), [playerCtrl, favActions, seek, volumeChange, playlist.setPlayMode, notification]);
+
   return (
-    <FloatingPlayer
-      storage={{
-        windowPosition: windowStore.windowPosition,
-        windowSize: windowStore.windowSize,
-        favorites: favorites.favorites,
-        recentTracks: recent.recentTracks,
-        setWindowPosition: windowStore.setWindowPosition,
-        setWindowSize: windowStore.setWindowSize,
-      }}
-      playerState={playerState}
-      playlistState={{ tracks: playlist.tracks, currentIndex: playlist.currentIndex, playMode: playlist.playMode }}
-      playerActions={{
-        onPlayPause: playerCtrl.handlePlayPause,
-        onPrev: playerCtrl.handlePrevButton,
-        onNext: playerCtrl.handleNextButton,
-        onSeek: seek,
-        onVolumeChange: volumeChange,
-        onPlayModeChange: playlist.setPlayMode,
-      }}
-      playlistActions={{
-        onPlayTrack: playerCtrl.handlePlayTrack,
-        onDeleteTrack: playerCtrl.handleDeleteTrack,
-        onClearPlaylist: playerCtrl.handleClearPlaylist,
-        onReorderTracks: playerCtrl.handleReorderTracks,
-      }}
-      favoriteActions={{
-        onCreateFavorite: favActions.handleCreateFavorite,
-        onToggleFavorite: favActions.handleToggleFavorite,
-        onAddToFavorite: favActions.handleAddToFavorite,
-        onAddToFavoriteFromInput: favActions.handleAddToFavoriteFromInput,
-        onPlayFromFavorite: favActions.handlePlayFromFavorite,
-        onRemoveFromFavorite: favActions.handleRemoveFromFavorite,
-        onDeleteFavorite: favActions.handleDeleteFavorite,
-        onReorderFavTracks: favActions.handleReorderFavTracks,
-        onAddAllToPlaylist: favActions.handleAddAllToPlaylist,
-      }}
-      onInputSubmit={playerCtrl.handleInputSubmit}
-      loading={playerCtrl.loading}
-      notification={notification}
-    />
+    <PlayerContext.Provider value={playerContextValue}>
+      <FloatingPlayer
+        storage={{
+          windowPosition: windowStore.windowPosition,
+          windowSize: windowStore.windowSize,
+          favorites: favorites.favorites,
+          recentTracks: recent.recentTracks,
+          setWindowPosition: windowStore.setWindowPosition,
+          setWindowSize: windowStore.setWindowSize,
+        }}
+        playerState={playerState}
+        playlistState={{ tracks: playlist.tracks, currentIndex: playlist.currentIndex, playMode: playlist.playMode }}
+        playerActions={{
+          onPlayPause: playerCtrl.handlePlayPause,
+          onPrev: playerCtrl.handlePrevButton,
+          onNext: playerCtrl.handleNextButton,
+          onSeek: seek,
+          onVolumeChange: volumeChange,
+          onPlayModeChange: playlist.setPlayMode,
+        }}
+        playlistActions={{
+          onPlayTrack: playerCtrl.handlePlayTrack,
+          onDeleteTrack: playerCtrl.handleDeleteTrack,
+          onClearPlaylist: playerCtrl.handleClearPlaylist,
+          onReorderTracks: playerCtrl.handleReorderTracks,
+        }}
+        favoriteActions={{
+          onCreateFavorite: favActions.handleCreateFavorite,
+          onToggleFavorite: favActions.handleToggleFavorite,
+          onAddToFavorite: favActions.handleAddToFavorite,
+          onAddToFavoriteFromInput: favActions.handleAddToFavoriteFromInput,
+          onPlayFromFavorite: favActions.handlePlayFromFavorite,
+          onRemoveFromFavorite: favActions.handleRemoveFromFavorite,
+          onDeleteFavorite: favActions.handleDeleteFavorite,
+          onReorderFavTracks: favActions.handleReorderFavTracks,
+          onAddAllToPlaylist: favActions.handleAddAllToPlaylist,
+        }}
+        onInputSubmit={playerCtrl.handleInputSubmit}
+        loading={playerCtrl.loading}
+        notification={notification}
+      />
+    </PlayerContext.Provider>
   );
 }
 
