@@ -1,4 +1,5 @@
 import { useDrag } from '@/hooks/useDrag';
+import { useResize } from '@/hooks/useResize';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ExpandedPanel from './ExpandedPanel';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
@@ -8,8 +9,6 @@ import type { CollapsedState, PlayerState, PlaylistState, PlayMode, WindowPositi
 
 const THUMB_WIDTH = 64;
 const THUMB_HEIGHT = 64;
-const PANEL_MIN_WIDTH = 320;
-const PANEL_MIN_HEIGHT = 480;
 const SPRING_DURATION = 200;
 
 function lerp(a: number, b: number, t: number): number {
@@ -71,13 +70,6 @@ export default function FloatingPlayer({
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const [animating, setAnimating] = useState<'expand' | 'collapse' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const resizeSession = useRef<{
-    startScreenX: number;
-    startScreenY: number;
-    startW: number;
-    startH: number;
-    edge: 'e' | 'se' | 's';
-  } | null>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
   const expandedSizeRef = useRef<{ width: number; height: number }>({
     width: 400,
@@ -122,40 +114,7 @@ export default function FloatingPlayer({
     })();
   }, []);
 
-  // Window resize drag
-  useEffect(() => {
-    function onResizeMove(e: MouseEvent) {
-      const resize = resizeSession.current;
-      if (!resize) return;
-      const dx = e.screenX - resize.startScreenX;
-      const dy = e.screenY - resize.startScreenY;
-      let newW = resize.startW;
-      let newH = resize.startH;
-      if (resize.edge === 'e' || resize.edge === 'se') {
-        newW = Math.max(PANEL_MIN_WIDTH, resize.startW + dx);
-      }
-      if (resize.edge === 's' || resize.edge === 'se') {
-        newH = Math.max(PANEL_MIN_HEIGHT, resize.startH + dy);
-      }
-      const newSize = { width: newW, height: newH };
-      expandedSizeRef.current = newSize;
-      window.electronAPI.windowResize(newW, newH);
-      storage.setWindowSize(newSize);
-    }
-    function onResizeUp() {
-      if (!resizeSession.current) return;
-      resizeSession.current = null;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    }
-    window.addEventListener('mousemove', onResizeMove);
-    window.addEventListener('mouseup', onResizeUp);
-    return () => {
-      window.removeEventListener('mousemove', onResizeMove);
-      window.removeEventListener('mouseup', onResizeUp);
-    };
-  }, [storage.setWindowSize]);
-
+  
   // 窗口大小随动画进度同步（展开时）
   useEffect(() => {
     if (animating !== 'expand') return;
@@ -203,18 +162,11 @@ export default function FloatingPlayer({
     return () => clearTimeout(timer);
   }, [animating]);
 
-  const handleResizeStart = useCallback((e: React.MouseEvent, edge: 'e' | 'se' | 's') => {
-    e.stopPropagation();
-    e.preventDefault();
-    resizeSession.current = {
-      startScreenX: e.screenX,
-      startScreenY: e.screenY,
-      startW: storage.windowSize.width,
-      startH: storage.windowSize.height,
-      edge,
-    };
-    document.body.style.userSelect = 'none';
-  }, [storage.windowSize]);
+  const { handleResizeStart } = useResize(
+    storage.windowSize,
+    (size) => storage.setWindowSize(size),
+    (size) => { expandedSizeRef.current = size; },
+  );
 
   const collapseWindow = useCallback(() => {
     setAnimating('collapse');
