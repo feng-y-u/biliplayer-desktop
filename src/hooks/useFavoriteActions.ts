@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import type { Track, FavoriteFolder } from '@/types';
 import { getVideoInfo, getPlaylist } from '@/services/api';
-import { isSameTrack, isTrackFavorited } from '@/utils/track';
+import { isSameTrack } from '@/utils/track';
 
 interface FavoritesStore {
   favorites: FavoriteFolder[];
@@ -99,29 +99,6 @@ export function useFavoriteActions({
     showNotification(`已添加 ${newTracks.length} 首歌曲到播放列表`);
   }, [playlistTracks, setPlaylistTracks, showNotification]);
 
-  const handleToggleFavorite = useCallback((track: Track) => {
-    if (isTrackFavorited(track, favorites.favorites)) {
-      favorites.setFavorites(favorites.favorites.map(f => ({
-        ...f,
-        tracks: f.tracks.filter(t => !isSameTrack(t, track)),
-        updatedAt: Date.now(),
-      })));
-      return;
-    }
-
-    if (favorites.favorites.length === 0) {
-      const newFav = { id: Date.now().toString(), name: '默认收藏夹', icon: '♥', tracks: [track], updatedAt: Date.now() };
-      favorites.setFavorites([newFav]);
-      return;
-    }
-
-    favorites.setFavorites(favorites.favorites.map((f, i) =>
-      i === 0
-        ? { ...f, tracks: [...f.tracks, track], updatedAt: Date.now() }
-        : f
-    ));
-  }, [favorites.favorites, favorites.setFavorites]);
-
   const handlePlayFromFavorite = useCallback(async (track: Track) => {
     const plIndex = playlistTracks.findIndex(t => isSameTrack(t, track));
     if (plIndex >= 0) {
@@ -133,7 +110,6 @@ export function useFavoriteActions({
 
   return {
     handleCreateFavorite,
-    handleToggleFavorite,
     handlePlayFromFavorite,
     handleRemoveFromFavorite,
     handleDeleteFavorite,

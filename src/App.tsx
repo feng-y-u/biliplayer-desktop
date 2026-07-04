@@ -91,7 +91,6 @@ function App() {      //数据
     onClearPlaylist: playerCtrl.handleClearPlaylist,
     onReorderTracks: playerCtrl.handleReorderTracks,
     onCreateFavorite: favActions.handleCreateFavorite,
-    onToggleFavorite: favActions.handleToggleFavorite,
     onAddToFavorite: favActions.handleAddToFavorite,
     onAddToFavoriteFromInput: favActions.handleAddToFavoriteFromInput,
     onPlayFromFavorite: favActions.handlePlayFromFavorite,

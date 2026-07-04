@@ -2,7 +2,6 @@ import { useRef, useState, useEffect } from 'react';
 import './Playlist.css';
 import type { Track, FavoriteFolder } from '@/types';
 import { formatDuration } from '@/utils/format';
-import { isTrackFavorited } from '@/utils/track';
 import { useDragReorder } from '@/hooks/useDragReorder';
 import { usePlayerContext } from '@/contexts/PlayerContext';
 
@@ -97,13 +96,6 @@ export default function Playlist({
               <div className="pl-artist">{track.author}</div>
             </div>
             <span className="pl-dur">{formatDuration(track.duration)}</span>
-            <button
-                className={`pl-fav-btn${isTrackFavorited(track, favorites) ? ' favorited' : ''}`}
-                onClick={(e) => { e.stopPropagation(); ctx.onToggleFavorite(track); }}
-                title={isTrackFavorited(track, favorites) ? '取消收藏' : '收藏'}
-              >
-                {isTrackFavorited(track, favorites) ? '♥' : '♡'}
-              </button>
             {favorites.length > 0 && (
               <div className="pl-fav-dropdown-wrapper" style={{ position: 'relative', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                 <button

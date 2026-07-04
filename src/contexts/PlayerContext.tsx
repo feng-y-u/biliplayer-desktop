@@ -19,7 +19,6 @@ export interface PlayerContextValue {
 
   // 收藏
   onCreateFavorite: (name: string) => void;
-  onToggleFavorite: (track: Track) => void;
   onAddToFavorite: (favId: string, track: Track) => void;
   onAddToFavoriteFromInput: (favId: string, input: string) => Promise<void>;
   onPlayFromFavorite: (track: Track) => void;

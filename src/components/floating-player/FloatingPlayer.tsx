@@ -37,6 +37,17 @@ export default function FloatingPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
   const expandedSizeRef = useRef(storage.expandedPanelSize);
+  const prevExpandedSize = useRef(storage.expandedPanelSize);
+
+  // 当存储中的 expandedPanelSize 更新时，同步更新 ref
+  useEffect(() => {
+    const current = storage.expandedPanelSize;
+    if (current.width !== prevExpandedSize.current.width ||
+        current.height !== prevExpandedSize.current.height) {
+      expandedSizeRef.current = current;
+      prevExpandedSize.current = current;
+    }
+  }, [storage.expandedPanelSize.width, storage.expandedPanelSize.height]);
 
   const { handleMouseDown: handleDragStart, didDrag } = useDrag(
     (pos) => storage.setWindowPosition(pos),
