@@ -3,16 +3,19 @@ import type { WindowPosition, WindowSize } from '@/types';
 
 const BATCH_FLUSH_DELAY_MS = 100;
 const DEFAULT_WINDOW_SIZE: WindowSize = { width: 320, height: 480 };
+const DEFAULT_EXPANDED_SIZE: WindowSize = { width: 400, height: 600 };
 
 interface WindowState {
   windowPosition: WindowPosition;
   windowSize: WindowSize;
+  expandedPanelSize: WindowSize;
   volume: number;
 }
 
 interface WindowActions {
   setWindowPosition: (pos: WindowPosition) => void;
   setWindowSize: (size: WindowSize) => void;
+  setExpandedPanelSize: (size: WindowSize) => void;
   setVolume: (volume: number) => void;
   loadFromStore: () => Promise<void>;
 }
@@ -39,6 +42,7 @@ function batchPersist(key: string, value: unknown) {
 export const useWindowStore = create<WindowState & WindowActions>((set) => ({
   windowPosition: { left: 0, top: 0 },
   windowSize: DEFAULT_WINDOW_SIZE,
+  expandedPanelSize: DEFAULT_EXPANDED_SIZE,
   volume: 0.7,
 
   setWindowPosition: (windowPosition) => {
@@ -51,6 +55,11 @@ export const useWindowStore = create<WindowState & WindowActions>((set) => ({
     batchPersist('windowSize', windowSize);
   },
 
+  setExpandedPanelSize: (expandedPanelSize) => {
+    set({ expandedPanelSize });
+    batchPersist('expandedPanelSize', expandedPanelSize);
+  },
+
   setVolume: (volume) => {
     set({ volume });
     batchPersist('volume', volume);
@@ -59,13 +68,15 @@ export const useWindowStore = create<WindowState & WindowActions>((set) => ({
   loadFromStore: async () => {
     const api = window.electronAPI;
     if (!api) return;
-    const [pos, size, vol] = await Promise.all([
+    const [pos, size, expandedSize, vol] = await Promise.all([
       api.storeGet('windowPosition'),
       api.storeGet('windowSize'),
+      api.storeGet('expandedPanelSize'),
       api.storeGet('volume'),
     ]);
     if (pos) set({ windowPosition: pos });
     if (size) set({ windowSize: size });
+    if (expandedSize) set({ expandedPanelSize: expandedSize });
     if (vol !== undefined) set({ volume: vol });
   },
 }));

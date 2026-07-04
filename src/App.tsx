@@ -110,10 +110,12 @@ function App() {      //数据
         storage={{
           windowPosition: windowStore.windowPosition,
           windowSize: windowStore.windowSize,
+          expandedPanelSize: windowStore.expandedPanelSize,
           favorites: favorites.favorites,
           recentTracks: recent.recentTracks,
           setWindowPosition: windowStore.setWindowPosition,
           setWindowSize: windowStore.setWindowSize,
+          setExpandedPanelSize: windowStore.setExpandedPanelSize,
         }}
         playerState={playerState}
         playlistState={{ tracks: playlist.tracks, currentIndex: playlist.currentIndex, playMode: playlist.playMode }}

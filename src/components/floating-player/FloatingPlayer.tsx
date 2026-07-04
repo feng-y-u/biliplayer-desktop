@@ -16,10 +16,12 @@ interface FloatingPlayerProps {
   storage: {
     windowPosition: WindowPosition;
     windowSize: WindowSize;
+    expandedPanelSize: WindowSize;
     favorites: FavoriteFolder[];
     recentTracks: Track[];
     setWindowPosition: (p: WindowPosition) => void;
     setWindowSize: (s: WindowSize) => void;
+    setExpandedPanelSize: (s: WindowSize) => void;
   };
   playerState: PlayerState;
   playlistState: PlaylistState;
@@ -34,7 +36,7 @@ export default function FloatingPlayer({
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const containerRef = useRef<HTMLDivElement>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
-  const expandedSizeRef = useRef({ width: 400, height: 600 });
+  const expandedSizeRef = useRef(storage.expandedPanelSize);
 
   const { handleMouseDown: handleDragStart, didDrag } = useDrag(
     (pos) => storage.setWindowPosition(pos),
@@ -78,7 +80,10 @@ export default function FloatingPlayer({
   const { handleResizeStart } = useResize(
     storage.windowSize,
     (size) => storage.setWindowSize(size),
-    (size) => { expandedSizeRef.current = size; },
+    (size) => {
+      expandedSizeRef.current = size;
+      storage.setExpandedPanelSize(size);
+    },
   );
 
   const handleThumbClick = useCallback(async () => {

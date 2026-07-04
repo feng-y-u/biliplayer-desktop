@@ -12,5 +12,6 @@ export const appCore = {
     recentTracks: any[];
     windowPosition: { left: number; top: number };
     windowSize: { width: number; height: number };
+    expandedPanelSize: { width: number; height: number };
   }>(),
 };
