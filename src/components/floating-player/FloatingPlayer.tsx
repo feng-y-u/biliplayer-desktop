@@ -1,5 +1,6 @@
 import { useDrag } from '@/hooks/useDrag';
 import { useResize } from '@/hooks/useResize';
+import { useLerpAnimation } from '@/hooks/useLerpAnimation';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ExpandedPanel from './ExpandedPanel';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
@@ -9,11 +10,6 @@ import type { CollapsedState, PlayerState, PlaylistState, PlayMode, WindowPositi
 
 const THUMB_WIDTH = 64;
 const THUMB_HEIGHT = 64;
-const SPRING_DURATION = 200;
-
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
 
 interface FloatingPlayerProps {
   storage: {
@@ -68,18 +64,9 @@ export default function FloatingPlayer({
   notification,
 }: FloatingPlayerProps) {
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
-  const [animating, setAnimating] = useState<'expand' | 'collapse' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
-  const expandedSizeRef = useRef<{ width: number; height: number }>({
-    width: 400,
-    height: 600,
-  });
-  const expandParamsRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
-  const animStartRef = useRef({ w: THUMB_WIDTH, h: THUMB_HEIGHT });
-  const animTargetRef = useRef({ w: THUMB_WIDTH, h: THUMB_HEIGHT });
-  const collapseRafRef = useRef<number>(0);
-  const expandStartTimeRef = useRef(0);
+  const expandedSizeRef = useRef({ width: 400, height: 600 });
 
   const { handleMouseDown: handleDragStart, didDrag } = useDrag(
     (pos) => storage.setWindowPosition(pos),
@@ -93,11 +80,17 @@ export default function FloatingPlayer({
     },
   );
 
-  // Sync window size when user drags resize handles
-  useEffect(() => {
-    if (collapsedState !== 'expanded' || animating) return;
-    window.electronAPI.windowResize(storage.windowSize.width, storage.windowSize.height);
-  }, [storage.windowSize, collapsedState, animating]);
+  const { animating, startAnimation } = useLerpAnimation({
+    onFrame: (w, h) => window.electronAPI.windowResize(w, h),
+    onCollapseEnd: () => {
+      setCollapsedState('collapsed');
+      if (collapsedPosRef.current) {
+        window.electronAPI.windowMove(collapsedPosRef.current.x, collapsedPosRef.current.y);
+      }
+      window.electronAPI.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
+      storage.setWindowSize({ width: THUMB_WIDTH, height: THUMB_HEIGHT });
+    },
+  });
 
   // Set initial window size and restore saved position on mount
   useEffect(() => {
@@ -114,97 +107,20 @@ export default function FloatingPlayer({
     })();
   }, []);
 
-  
-  // 窗口大小随动画进度同步（展开时）
-  useEffect(() => {
-    if (animating !== 'expand') return;
-    let rafId: number;
-    expandStartTimeRef.current = performance.now();
-    const tick = () => {
-      const p = Math.min((performance.now() - expandStartTimeRef.current) / SPRING_DURATION, 1);
-      const w = Math.round(lerp(animStartRef.current.w, animTargetRef.current.w, p));
-      const h = Math.round(lerp(animStartRef.current.h, animTargetRef.current.h, p));
-      window.electronAPI.windowResize(w, h);
-      if (p < 1) rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, [animating]);
-
-  // React 提交 DOM、thumb 已移除后再移动窗口位置
-  useEffect(() => {
-    if (animating !== 'expand') return;
-    const p = expandParamsRef.current;
-    if (!p) return;
-    const api = window.electronAPI;
-    api.windowMove(p.x, p.y);
-  }, [animating]);
-
-  // Expand: animate expand then stop
-  useEffect(() => {
-    if (animating !== 'expand') return;
-    const timer = setTimeout(() => {
-      setAnimating(null);
-      const api = window.electronAPI;
-      const size = expandedSizeRef.current;
-      api.windowResize(size.width, size.height);
-    }, SPRING_DURATION);
-    return () => clearTimeout(timer);
-  }, [animating]);
-
-  // Collapse: set collapsedState after animation completes
-  useEffect(() => {
-    if (animating !== 'collapse') return;
-    const timer = setTimeout(() => {
-      setCollapsedState('collapsed');
-      setAnimating(null);
-    }, SPRING_DURATION);
-    return () => clearTimeout(timer);
-  }, [animating]);
-
   const { handleResizeStart } = useResize(
     storage.windowSize,
     (size) => storage.setWindowSize(size),
     (size) => { expandedSizeRef.current = size; },
   );
 
-  const collapseWindow = useCallback(() => {
-    setAnimating('collapse');
-    const api = window.electronAPI;
-    const currentW = storage.windowSize.width;
-    const currentH = storage.windowSize.height;
-    const startTime = performance.now();
-
-    const animateCollapse = (timestamp: number) => {
-      const elapsed = timestamp - startTime;
-      const t = Math.min(elapsed / SPRING_DURATION, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      api.windowResize(
-        Math.round(lerp(currentW, THUMB_WIDTH, eased)),
-        Math.round(lerp(currentH, THUMB_HEIGHT, eased))
-      );
-      if (t < 1) {
-        collapseRafRef.current = requestAnimationFrame(animateCollapse);
-      } else {
-        if (collapsedPosRef.current) {
-          api.windowMove(collapsedPosRef.current.x, collapsedPosRef.current.y);
-        }
-        api.windowResize(THUMB_WIDTH, THUMB_HEIGHT);
-      }
-    };
-    cancelAnimationFrame(collapseRafRef.current);
-    collapseRafRef.current = requestAnimationFrame(animateCollapse);
-  }, [storage.windowSize]);
-
   const handleThumbClick = useCallback(async () => {
     if (didDrag.current) {
       didDrag.current = false;
       return;
     }
-    const api = window.electronAPI;
 
     if (collapsedState === 'collapsed') {
-      const pos = await api.windowGetPosition();
+      const pos = await window.electronAPI.windowGetPosition();
       collapsedPosRef.current = { x: pos.x, y: pos.y };
       const thumbCenterX = pos.x + THUMB_WIDTH / 2;
       const remembered = expandedSizeRef.current;
@@ -215,20 +131,19 @@ export default function FloatingPlayer({
       expandedX = Math.max(20, Math.min(expandedX, window.screen.width - targetW - 20));
       expandedY = Math.max(20, Math.min(expandedY, window.screen.height - targetH - 20));
 
-      expandParamsRef.current = { x: expandedX, y: expandedY, w: targetW, h: targetH };
-      animStartRef.current = { w: THUMB_WIDTH, h: THUMB_HEIGHT };
-      animTargetRef.current = { w: targetW, h: targetH };
-
+      // 先移动窗口位置
+      window.electronAPI.windowMove(expandedX, expandedY);
+      // 再开始展开动画
       setCollapsedState('expanded');
-      setAnimating('expand');
+      startAnimation('expand', { width: THUMB_WIDTH, height: THUMB_HEIGHT }, { width: targetW, height: targetH });
     } else {
-      collapseWindow();
+      startAnimation('collapse', { width: storage.windowSize.width, height: storage.windowSize.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
     }
-  }, [collapsedState, collapseWindow]);
+  }, [collapsedState, storage, didDrag, startAnimation]);
 
   const handleClose = useCallback(() => {
-    collapseWindow();
-  }, [collapseWindow]);
+    startAnimation('collapse', { width: storage.windowSize.width, height: storage.windowSize.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
+  }, [storage, startAnimation]);
 
   return (
     <div
