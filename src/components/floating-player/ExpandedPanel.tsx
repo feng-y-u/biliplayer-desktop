@@ -8,7 +8,7 @@ import RecentTab from './RecentTab';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
 import { PlayPauseIcon, NextIcon } from './Icons';
 import type { Track, PlayMode, FavoriteFolder, CurrentAudio } from '@/types';
-import { formatDuration } from '@/utils/format';
+import { formatDuration, calcProgress } from '@/utils/format';
 
 interface ExpandedPanelProps {
   currentAudio?: CurrentAudio | null;
@@ -81,7 +81,7 @@ export default function ExpandedPanel({
     if (volume > 0) prevVolume.current = volume;
   }, [volume]);
 
-  const rawProg = duration ? (currentTime / duration) * 100 : 0;
+  const rawProg = calcProgress(currentTime, duration);
   const progValue = seekingValue ?? rawProg;
 
   const handleSubmit = useCallback(() => {

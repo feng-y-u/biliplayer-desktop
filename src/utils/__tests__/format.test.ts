@@ -32,3 +32,20 @@ describe('formatDuration', () => {
     expect(formatDuration(-60)).toBe('--:--');
   });
 });
+
+import { calcProgress } from '../format';
+
+describe('calcProgress', () => {
+  it('正常值', () => {
+    expect(calcProgress(30, 100)).toBe(30);
+  });
+  it('零总值返回 0', () => {
+    expect(calcProgress(30, 0)).toBe(0);
+  });
+  it('当前值等于总值', () => {
+    expect(calcProgress(100, 100)).toBe(100);
+  });
+  it('当前值大于总值', () => {
+    expect(calcProgress(150, 100)).toBe(150);
+  });
+});

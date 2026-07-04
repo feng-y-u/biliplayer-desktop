@@ -4,3 +4,7 @@ export function formatDuration(seconds?: number): string {
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
+
+export function calcProgress(current: number, total: number): number {
+  return total > 0 ? (current / total) * 100 : 0;
+}
