@@ -1,3 +1,4 @@
+import { useDrag } from '@/hooks/useDrag';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ExpandedPanel from './ExpandedPanel';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
@@ -9,7 +10,6 @@ const THUMB_WIDTH = 64;
 const THUMB_HEIGHT = 64;
 const PANEL_MIN_WIDTH = 320;
 const PANEL_MIN_HEIGHT = 480;
-const DRAG_THRESHOLD = 5;
 const SPRING_DURATION = 200;
 
 function lerp(a: number, b: number, t: number): number {
@@ -71,14 +71,6 @@ export default function FloatingPlayer({
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const [animating, setAnimating] = useState<'expand' | 'collapse' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const didDrag = useRef(false);
-  const dragSession = useRef<{
-    startScreenX: number;
-    startScreenY: number;
-    startWinX: number;
-    startWinY: number;
-    dragging: boolean;
-  } | null>(null);
   const resizeSession = useRef<{
     startScreenX: number;
     startScreenY: number;
@@ -96,6 +88,18 @@ export default function FloatingPlayer({
   const animTargetRef = useRef({ w: THUMB_WIDTH, h: THUMB_HEIGHT });
   const collapseRafRef = useRef<number>(0);
   const expandStartTimeRef = useRef(0);
+
+  const { handleMouseDown: handleDragStart, didDrag } = useDrag(
+    (pos) => storage.setWindowPosition(pos),
+    (target) => {
+      if (collapsedState === 'expanded') {
+        const el = target as HTMLElement;
+        if (!el.closest('.ep-top-bar')) return false;
+        if (el.closest('[data-no-drag]')) return false;
+      }
+      return true;
+    },
+  );
 
   // Sync window size when user drags resize handles
   useEffect(() => {
@@ -116,43 +120,6 @@ export default function FloatingPlayer({
         storage.setWindowPosition({ left: pos.x, top: pos.y });
       }
     })();
-  }, []);
-
-  // Window drag
-  useEffect(() => {
-    function onMouseMove(e: MouseEvent) {
-      const drag = dragSession.current;
-      if (!drag) return;
-      const dx = e.screenX - drag.startScreenX;
-      const dy = e.screenY - drag.startScreenY;
-      if (!drag.dragging) {
-        if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
-        drag.dragging = true;
-        didDrag.current = true;
-        document.body.style.cursor = 'grabbing';
-        document.body.style.userSelect = 'none';
-      }
-      window.electronAPI.windowMove(drag.startWinX + dx, drag.startWinY + dy);
-    }
-    function onMouseUp() {
-      const drag = dragSession.current;
-      if (!drag) return;
-      dragSession.current = null;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      if (drag.dragging) {
-        (async () => {
-          const pos = await window.electronAPI.windowGetPosition();
-          storage.setWindowPosition({ left: pos.x, top: pos.y });
-        })();
-      }
-    }
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
   }, []);
 
   // Window resize drag
@@ -235,23 +202,6 @@ export default function FloatingPlayer({
     }, SPRING_DURATION);
     return () => clearTimeout(timer);
   }, [animating]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (collapsedState === 'expanded') {
-      if (!target.closest('.ep-top-bar')) return;
-      // 不拦截 data-no-drag 内部的点击（关闭按钮等）
-      if (target.closest('[data-no-drag]')) return;
-    }
-    dragSession.current = {
-      startScreenX: e.screenX,
-      startScreenY: e.screenY,
-      startWinX: window.screenX,
-      startWinY: window.screenY,
-      dragging: false,
-    };
-    didDrag.current = false;
-  }, [collapsedState]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, edge: 'e' | 'se' | 's') => {
     e.stopPropagation();
@@ -338,7 +288,7 @@ export default function FloatingPlayer({
         animating === 'collapse' && 'animating-collapse',
         playerState.isPlaying && 'playing',
       ].filter(Boolean).join(' ')}
-      onMouseDown={handleMouseDown}
+      onMouseDown={handleDragStart}
     >
       {collapsedState !== 'expanded' && (
         <>
