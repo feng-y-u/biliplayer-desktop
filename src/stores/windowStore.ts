@@ -3,7 +3,7 @@ import type { WindowPosition, WindowSize } from '@/types';
 
 const BATCH_FLUSH_DELAY_MS = 100;
 const DEFAULT_WINDOW_SIZE: WindowSize = { width: 320, height: 480 };
-const DEFAULT_EXPANDED_SIZE: WindowSize = { width: 400, height: 600 };
+const DEFAULT_EXPANDED_SIZE: WindowSize = { width: 330, height: 700 };
 
 interface WindowState {
   windowPosition: WindowPosition;

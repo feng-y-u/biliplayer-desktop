@@ -11,7 +11,7 @@ import type { CollapsedState, PlayerState, PlaylistState, WindowPosition, Window
 
 const THUMB_WIDTH = 64;
 const THUMB_HEIGHT = 64;
-const FALLBACK_SIZE: WindowSize = { width: 400, height: 600 };
+const FALLBACK_SIZE: WindowSize = { width: 330, height: 700 };
 
 interface FloatingPlayerProps {
   storage: {
