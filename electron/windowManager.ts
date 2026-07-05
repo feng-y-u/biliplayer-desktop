@@ -23,6 +23,8 @@ export function createWindow() {
   const mainWindow = new BrowserWindow({
     width: THUMB_WIDTH,
     height: THUMB_HEIGHT,
+    minWidth: THUMB_WIDTH,
+    minHeight: THUMB_HEIGHT,
     x: winX,
     y: winY,
     alwaysOnTop: true,

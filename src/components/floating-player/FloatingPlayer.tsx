@@ -144,6 +144,8 @@ export default function FloatingPlayer({
       // 收起时保存当前展开位置和大小
       const pos = await window.electronAPI.windowGetPosition();
       storage.setWindowPosition({ left: pos.x, top: pos.y });
+      // 同时更新 collapsedPosRef，确保收起后位置一致
+      collapsedPosRef.current = { x: pos.x, y: pos.y };
       // 从 OS 实时获取当前窗口大小，与位置一样可靠
       storage.setExpandedPanelSize({ width: pos.width, height: pos.height });
       startAnimation('collapse', { width: pos.width, height: pos.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
@@ -153,6 +155,8 @@ export default function FloatingPlayer({
   const handleClose = useCallback(async () => {
     const pos = await window.electronAPI.windowGetPosition();
     storage.setExpandedPanelSize({ width: pos.width, height: pos.height });
+    // 更新 collapsedPosRef，确保收起后不偏移
+    collapsedPosRef.current = { x: pos.x, y: pos.y };
     startAnimation('collapse', { width: pos.width, height: pos.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
   }, [storage, startAnimation]);
 
