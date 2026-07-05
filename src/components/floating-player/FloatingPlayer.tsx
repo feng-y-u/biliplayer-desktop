@@ -37,16 +37,11 @@ export default function FloatingPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
   const expandedSizeRef = useRef(storage.expandedPanelSize);
-  const prevExpandedSize = useRef(storage.expandedPanelSize);
 
   // 当存储中的 expandedPanelSize 更新时，同步更新 ref
   useEffect(() => {
-    const current = storage.expandedPanelSize;
-    if (current.width !== prevExpandedSize.current.width ||
-        current.height !== prevExpandedSize.current.height) {
-      expandedSizeRef.current = current;
-      prevExpandedSize.current = current;
-    }
+    const { width, height } = storage.expandedPanelSize;
+    expandedSizeRef.current = { width, height };
   }, [storage.expandedPanelSize.width, storage.expandedPanelSize.height]);
 
   const { handleMouseDown: handleDragStart, didDrag } = useDrag(
@@ -106,14 +101,32 @@ export default function FloatingPlayer({
     if (collapsedState === 'collapsed') {
       const pos = await window.electronAPI.windowGetPosition();
       collapsedPosRef.current = { x: pos.x, y: pos.y };
-      const thumbCenterX = pos.x + THUMB_WIDTH / 2;
+
+      // 使用保存的展开位置和大小
+      const savedPos = storage.windowPosition;
       const remembered = expandedSizeRef.current;
-      const targetW = Math.min(remembered.width, window.screen.width - 40);
-      const targetH = Math.min(remembered.height, window.screen.height - 40);
-      let expandedX = thumbCenterX - targetW / 2;
-      let expandedY = pos.y;
-      expandedX = Math.max(20, Math.min(expandedX, window.screen.width - targetW - 20));
-      expandedY = Math.max(20, Math.min(expandedY, window.screen.height - targetH - 20));
+
+      // 检查是否有有效的保存位置（非默认值且不为0）
+      const hasSavedPosition = savedPos.left !== 0 && savedPos.top !== 0;
+
+      let targetW = Math.min(remembered.width, window.screen.width - 40);
+      let targetH = Math.min(remembered.height, window.screen.height - 40);
+
+      let expandedX: number;
+      let expandedY: number;
+
+      if (hasSavedPosition) {
+        // 使用保存的位置，但要确保在屏幕范围内
+        expandedX = Math.max(20, Math.min(savedPos.left, window.screen.width - targetW - 20));
+        expandedY = Math.max(20, Math.min(savedPos.top, window.screen.height - targetH - 20));
+      } else {
+        // 首次使用，基于缩略图位置计算
+        const thumbCenterX = pos.x + THUMB_WIDTH / 2;
+        expandedX = thumbCenterX - targetW / 2;
+        expandedY = pos.y;
+        expandedX = Math.max(20, Math.min(expandedX, window.screen.width - targetW - 20));
+        expandedY = Math.max(20, Math.min(expandedY, window.screen.height - targetH - 20));
+      }
 
       // 先移动窗口位置
       window.electronAPI.windowMove(expandedX, expandedY);
@@ -121,6 +134,9 @@ export default function FloatingPlayer({
       setCollapsedState('expanded');
       startAnimation('expand', { width: THUMB_WIDTH, height: THUMB_HEIGHT }, { width: targetW, height: targetH });
     } else {
+      // 收起时保存当前展开位置
+      const pos = await window.electronAPI.windowGetPosition();
+      storage.setWindowPosition({ left: pos.x, top: pos.y });
       startAnimation('collapse', { width: storage.windowSize.width, height: storage.windowSize.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
     }
   }, [collapsedState, storage, didDrag, startAnimation]);

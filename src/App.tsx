@@ -103,19 +103,30 @@ function App() {      //数据
     notification,
   }), [playerCtrl, favActions, seek, volumeChange, playlist.setPlayMode, notification]);
 
+  const storage = useMemo(() => ({
+    windowPosition: windowStore.windowPosition,
+    windowSize: windowStore.windowSize,
+    expandedPanelSize: windowStore.expandedPanelSize,
+    favorites: favorites.favorites,
+    recentTracks: recent.recentTracks,
+    setWindowPosition: windowStore.setWindowPosition,
+    setWindowSize: windowStore.setWindowSize,
+    setExpandedPanelSize: windowStore.setExpandedPanelSize,
+  }), [
+    windowStore.windowPosition,
+    windowStore.windowSize,
+    windowStore.expandedPanelSize,
+    favorites.favorites,
+    recent.recentTracks,
+    windowStore.setWindowPosition,
+    windowStore.setWindowSize,
+    windowStore.setExpandedPanelSize,
+  ]);
+
   return (
     <PlayerContext.Provider value={playerContextValue}>
       <FloatingPlayer
-        storage={{
-          windowPosition: windowStore.windowPosition,
-          windowSize: windowStore.windowSize,
-          expandedPanelSize: windowStore.expandedPanelSize,
-          favorites: favorites.favorites,
-          recentTracks: recent.recentTracks,
-          setWindowPosition: windowStore.setWindowPosition,
-          setWindowSize: windowStore.setWindowSize,
-          setExpandedPanelSize: windowStore.setExpandedPanelSize,
-        }}
+        storage={storage}
         playerState={playerState}
         playlistState={{ tracks: playlist.tracks, currentIndex: playlist.currentIndex, playMode: playlist.playMode }}
       />

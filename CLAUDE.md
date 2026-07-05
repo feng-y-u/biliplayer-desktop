@@ -54,6 +54,7 @@ npm run build                   # tsc && vite build + gen:preload + copy preload
 npx tsc --noEmit                # typecheck only (no build)
 npm run test                    # vitest run (unit + feature tests)
 npm run test:watch              # vitest in watch mode
+npx vitest run <path>           # run single test file
 npm run preview                 # vite preview (serve built dist locally)
 node dev.mjs                    # manual dev launcher (alternative to vite-plugin-electron)
 npm run pack                    # build + electron-builder --dir (unpacked output)
@@ -72,6 +73,9 @@ Four test files exist:
 
 Tests use vitest (config in `vitest.config.ts`). CI does **not** run tests.
 
+Run a single test file: `npx vitest run src/utils/__tests__/format.test.ts`
+Run a single test: `npx vitest run -t "test name pattern"`
+
 ## Architecture
 
 Two-process Electron app with strict context isolation. Renderer never calls `fetch` directly — all Bilibili API requests go through IPC to main process.
@@ -89,7 +93,7 @@ Two-process Electron app with strict context isolation. Renderer never calls `fe
 | `npm run dev` | `vite-plugin-electron` handles everything | Normal development |
 | `node dev.mjs` | Copies preload, starts Vite, launches Electron with `tsx` + `VITE_DEV_SERVER_URL` | Plugin misbehaves |
 
-Two Vite configs exist: `vite.config.ts` (primary, with electron + renderer plugins) and `vite.config.electron.ts` (standalone main-process-only build, not referenced from any script — likely legacy/unused).
+Two Vite configs exist: `vite.config.ts` (primary, with electron + renderer plugins) and `vite.config.electron.ts` (standalone main-process-only build, not referenced from any script — legacy/unused). `dev.mjs` is the manual dev launcher (tsx + VITE_DEV_SERVER_URL) when vite-plugin-electron misbehaves.
 
 ### Audio URL lifecycle
 

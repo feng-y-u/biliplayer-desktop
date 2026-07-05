@@ -2,15 +2,6 @@
 
 基于 Electron 的桌面应用，将浏览器扩展的播放器功能独立为一个持久悬浮窗。
 
-## 与浏览器扩展的区别
-
-| | 浏览器扩展 | 本地方案 |
-|---|---|---|
-| 播放器位置 | 注入页面 DOM | 独立 Electron 窗口 |
-| 持久性 | 切换标签页/刷新会消失 | 始终悬浮在桌面最上层 |
-| 关闭时机 | 关闭浏览器时关闭 | 关闭窗口时关闭 |
-| API 调用 | background service worker | Electron main process (无 CORS) |
-| 音频播放 | content script | renderer process |
 
 ## 技术栈
 
