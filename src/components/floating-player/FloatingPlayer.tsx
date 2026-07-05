@@ -11,12 +11,13 @@ import type { CollapsedState, PlayerState, PlaylistState, WindowPosition, Window
 
 const THUMB_WIDTH = 64;
 const THUMB_HEIGHT = 64;
+const FALLBACK_SIZE: WindowSize = { width: 400, height: 600 };
 
 interface FloatingPlayerProps {
   storage: {
     windowPosition: WindowPosition;
     windowSize: WindowSize;
-    expandedPanelSize: WindowSize;
+    expandedPanelSize: WindowSize | null;
     favorites: FavoriteFolder[];
     recentTracks: Track[];
     setWindowPosition: (p: WindowPosition) => void;
@@ -36,13 +37,16 @@ export default function FloatingPlayer({
   const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
   const containerRef = useRef<HTMLDivElement>(null);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
-  const expandedSizeRef = useRef(storage.expandedPanelSize);
+  // 当组件挂载时（展开状态下），存储当前的展开尺寸作为 ref，
+  // 用于收起时获取最后已知的展开大小（因为 zustand 更新可能有延迟）
+  const lastExpandSizeRef = useRef(storage.expandedPanelSize ?? FALLBACK_SIZE);
 
-  // 当存储中的 expandedPanelSize 更新时，同步更新 ref
+  // 同步 ref 与 zustand 的值（当 store 从磁盘加载完成后）
   useEffect(() => {
-    const { width, height } = storage.expandedPanelSize;
-    expandedSizeRef.current = { width, height };
-  }, [storage.expandedPanelSize.width, storage.expandedPanelSize.height]);
+    if (storage.expandedPanelSize) {
+      lastExpandSizeRef.current = storage.expandedPanelSize;
+    }
+  }, [storage.expandedPanelSize]);
 
   const { handleMouseDown: handleDragStart, didDrag } = useDrag(
     (pos) => storage.setWindowPosition(pos),
@@ -84,13 +88,18 @@ export default function FloatingPlayer({
   }, []);
 
   const { handleResizeStart } = useResize(
-    storage.windowSize,
-    (size) => storage.setWindowSize(size),
+    storage.expandedPanelSize ?? FALLBACK_SIZE,
     (size) => {
-      expandedSizeRef.current = size;
+      // 拖拽结束时保存最终尺寸
+      lastExpandSizeRef.current = size;
+      storage.setWindowSize(size);
       storage.setExpandedPanelSize(size);
     },
   );
+
+  const getExpandSize = useCallback(() => {
+    return storage.expandedPanelSize ?? lastExpandSizeRef.current;
+  }, [storage.expandedPanelSize]);
 
   const handleThumbClick = useCallback(async () => {
     if (didDrag.current) {
@@ -104,23 +113,22 @@ export default function FloatingPlayer({
 
       // 使用保存的展开位置和大小
       const savedPos = storage.windowPosition;
-      const remembered = expandedSizeRef.current;
+      const expSize = getExpandSize();
+      lastExpandSizeRef.current = expSize;
 
-      // 检查是否有有效的保存位置（非默认值且不为0）
-      const hasSavedPosition = savedPos.left !== 0 && savedPos.top !== 0;
-
-      let targetW = Math.min(remembered.width, window.screen.width - 40);
-      let targetH = Math.min(remembered.height, window.screen.height - 40);
+      let targetW = Math.min(expSize.width, window.screen.width - 40);
+      let targetH = Math.min(expSize.height, window.screen.height - 40);
 
       let expandedX: number;
       let expandedY: number;
 
+      // 检查是否有有效的保存位置（非默认值且不为0）
+      const hasSavedPosition = savedPos.left !== 0 && savedPos.top !== 0;
+
       if (hasSavedPosition) {
-        // 使用保存的位置，但要确保在屏幕范围内
         expandedX = Math.max(20, Math.min(savedPos.left, window.screen.width - targetW - 20));
         expandedY = Math.max(20, Math.min(savedPos.top, window.screen.height - targetH - 20));
       } else {
-        // 首次使用，基于缩略图位置计算
         const thumbCenterX = pos.x + THUMB_WIDTH / 2;
         expandedX = thumbCenterX - targetW / 2;
         expandedY = pos.y;
@@ -130,19 +138,22 @@ export default function FloatingPlayer({
 
       // 先移动窗口位置
       window.electronAPI.windowMove(expandedX, expandedY);
-      // 再开始展开动画
       setCollapsedState('expanded');
       startAnimation('expand', { width: THUMB_WIDTH, height: THUMB_HEIGHT }, { width: targetW, height: targetH });
     } else {
-      // 收起时保存当前展开位置
+      // 收起时保存当前展开位置和大小
       const pos = await window.electronAPI.windowGetPosition();
       storage.setWindowPosition({ left: pos.x, top: pos.y });
-      startAnimation('collapse', { width: storage.windowSize.width, height: storage.windowSize.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
+      // 从 OS 实时获取当前窗口大小，与位置一样可靠
+      storage.setExpandedPanelSize({ width: pos.width, height: pos.height });
+      startAnimation('collapse', { width: pos.width, height: pos.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
     }
-  }, [collapsedState, storage, didDrag, startAnimation]);
+  }, [collapsedState, storage, didDrag, startAnimation, getExpandSize]);
 
-  const handleClose = useCallback(() => {
-    startAnimation('collapse', { width: storage.windowSize.width, height: storage.windowSize.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
+  const handleClose = useCallback(async () => {
+    const pos = await window.electronAPI.windowGetPosition();
+    storage.setExpandedPanelSize({ width: pos.width, height: pos.height });
+    startAnimation('collapse', { width: pos.width, height: pos.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
   }, [storage, startAnimation]);
 
   return (

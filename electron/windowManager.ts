@@ -71,14 +71,8 @@ export function createWindow() {
 
   mainWindow.on('close', () => {
     const pos = mainWindow.getPosition();
-    const size = mainWindow.getSize();
     appCore.store.set('windowPosition', { left: pos[0], top: pos[1] });
-    // 如果窗口当前不是缩略图大小，则同时保存为展开大小
-    const width = size[0]!;
-    const height = size[1]!;
-    if (width > 100 && height > 100) {
-      appCore.store.set('expandedPanelSize', { width, height });
-    }
+    // 注意：expandedPanelSize 由渲染进程在收起时保存，这里不再重复保存
   });
 
   mainWindow.on('closed', () => {

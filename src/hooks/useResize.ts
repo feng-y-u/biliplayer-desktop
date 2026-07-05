@@ -14,30 +14,35 @@ interface ResizeSession {
 }
 
 export function useResize(
-  windowSize: WindowSize,
-  onResize: (size: WindowSize) => void,
-  onSizeRef?: (size: WindowSize) => void,
+  initialSize: WindowSize,
+  onResizeEnd: (size: WindowSize) => void,
 ) {
   const resizeSession = useRef<ResizeSession | null>(null);
+  const currentSizeRef = useRef(initialSize);
+  const onResizeEndRef = useRef(onResizeEnd);
+  onResizeEndRef.current = onResizeEnd;
 
   useEffect(() => {
     function onResizeMove(e: MouseEvent) {
-      const resize = resizeSession.current;
-      if (!resize) return;
-      const dx = e.screenX - resize.startScreenX;
-      const dy = e.screenY - resize.startScreenY;
-      let newW = resize.startW;
-      let newH = resize.startH;
-      if (resize.edge === 'e' || resize.edge === 'se') {
-        newW = Math.max(PANEL_MIN_WIDTH, resize.startW + dx);
+      const session = resizeSession.current;
+      if (!session) return;
+
+      const dx = e.screenX - session.startScreenX;
+      const dy = e.screenY - session.startScreenY;
+
+      let newW = session.startW;
+      let newH = session.startH;
+
+      if (session.edge === 'e' || session.edge === 'se') {
+        newW = Math.max(PANEL_MIN_WIDTH, session.startW + dx);
       }
-      if (resize.edge === 's' || resize.edge === 'se') {
-        newH = Math.max(PANEL_MIN_HEIGHT, resize.startH + dy);
+      if (session.edge === 's' || session.edge === 'se') {
+        newH = Math.max(PANEL_MIN_HEIGHT, session.startH + dy);
       }
+
       const newSize = { width: newW, height: newH };
-      onSizeRef?.(newSize);
+      currentSizeRef.current = newSize;
       window.electronAPI.windowResize(newW, newH);
-      onResize(newSize);
     }
 
     function onResizeUp() {
@@ -45,6 +50,7 @@ export function useResize(
       resizeSession.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      onResizeEndRef.current(currentSizeRef.current);
     }
 
     window.addEventListener('mousemove', onResizeMove);
@@ -53,7 +59,7 @@ export function useResize(
       window.removeEventListener('mousemove', onResizeMove);
       window.removeEventListener('mouseup', onResizeUp);
     };
-  }, [onResize, onSizeRef]);
+  }, []);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, edge: 'e' | 'se' | 's') => {
     e.stopPropagation();
@@ -61,12 +67,12 @@ export function useResize(
     resizeSession.current = {
       startScreenX: e.screenX,
       startScreenY: e.screenY,
-      startW: windowSize.width,
-      startH: windowSize.height,
+      startW: currentSizeRef.current.width,
+      startH: currentSizeRef.current.height,
       edge,
     };
     document.body.style.userSelect = 'none';
-  }, [windowSize]);
+  }, []);
 
   return { handleResizeStart };
 }

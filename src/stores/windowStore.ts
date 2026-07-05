@@ -8,7 +8,7 @@ const DEFAULT_EXPANDED_SIZE: WindowSize = { width: 400, height: 600 };
 interface WindowState {
   windowPosition: WindowPosition;
   windowSize: WindowSize;
-  expandedPanelSize: WindowSize;
+  expandedPanelSize: WindowSize | null;
   volume: number;
 }
 
@@ -42,7 +42,7 @@ function batchPersist(key: string, value: unknown) {
 export const useWindowStore = create<WindowState & WindowActions>((set) => ({
   windowPosition: { left: 0, top: 0 },
   windowSize: DEFAULT_WINDOW_SIZE,
-  expandedPanelSize: DEFAULT_EXPANDED_SIZE,
+  expandedPanelSize: null,
   volume: 0.7,
 
   setWindowPosition: (windowPosition) => {
@@ -76,7 +76,11 @@ export const useWindowStore = create<WindowState & WindowActions>((set) => ({
     ]);
     if (pos) set({ windowPosition: pos });
     if (size) set({ windowSize: size });
-    if (expandedSize) set({ expandedPanelSize: expandedSize });
+    if (expandedSize) {
+      set({ expandedPanelSize: expandedSize });
+    } else {
+      set({ expandedPanelSize: DEFAULT_EXPANDED_SIZE });
+    }
     if (vol !== undefined) set({ volume: vol });
   },
 }));
