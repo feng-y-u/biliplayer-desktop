@@ -14,3 +14,5 @@ lastrun.log
 procs_*.txt
 
 dist-electron/
+electron/preload.cjs
+release
