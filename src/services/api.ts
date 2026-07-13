@@ -89,5 +89,12 @@ export async function refreshAudioUrl(bvid: string, cid: number) {
   if (res.success) {
     currentUrl = res.data.url;
     currentExpiresAt = res.data.expiresAt;
+    if (audioEl) {
+      const wasPlaying = !audioEl.paused;
+      const pos = audioEl.currentTime;
+      audioEl.src = res.data.url;
+      audioEl.currentTime = pos;
+      if (wasPlaying) audioEl.play();
+    }
   }
 }

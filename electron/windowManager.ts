@@ -27,6 +27,7 @@ export function createWindow() {
     minHeight: THUMB_HEIGHT,
     x: winX,
     y: winY,
+    icon: path.join(__dirname, '../build/icon.ico'),
     alwaysOnTop: true,
     frame: false,
     transparent: true,
@@ -68,7 +69,7 @@ export function createWindow() {
       mainWindow?.webContents.toggleDevTools();
     });
   } else {
-    mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
   mainWindow.on('close', () => {
