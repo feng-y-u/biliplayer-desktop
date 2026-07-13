@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import type { Track, CurrentAudio, PlayMode } from '@/types';
 import { pauseAudioLocal, resumeAudioLocal, getVideoInfo, getPlaylist } from '@/services/api';
+import { parseInput } from '@/utils/bilibili';
 
 interface PlaylistStore {
   tracks: Track[];
@@ -19,16 +20,6 @@ interface PlaylistStore {
 interface RecentStore {
   recentTracks: Track[];
   addRecentTrack: (track: Track) => void;
-}
-
-const BV_RE = /BV[a-zA-Z0-9]+/i;
-const PLAYLIST_RE = /medialist\/play\/dlista\/\d+\/\d+|space\.bilibili\.com\/\d+\/favlist\?.*fid=\d+/;
-
-function parseInput(input: string): { type: 'playlist'; url: string } | { type: 'bvid'; bvid: string } | null {
-  if (PLAYLIST_RE.test(input)) return { type: 'playlist', url: input };
-  const m = input.match(BV_RE);
-  if (m) return { type: 'bvid', bvid: m[0] };
-  return null;
 }
 
 interface UsePlayerControllerOpts {
@@ -55,7 +46,7 @@ export function usePlayerController({
   const handlePlayPause = useCallback(() => {
     if (!currentAudio && playlist.tracks[playlist.currentIndex]) {
       const track = playlist.tracks[playlist.currentIndex]!;
-      playTrack(track).then(ok => { if (ok) playlist.setCurrentIndex(playlist.currentIndex); });
+      playTrack(track);
     } else if (isPlaying) {
       playPause();
     } else {
@@ -85,15 +76,21 @@ export function usePlayerController({
 
     const wasPlaying = index === playlist.currentIndex && isPlaying;
     const isLastTrack = playlist.tracks.length <= 1;
+    const remaining = playlist.tracks.length - 1;
+
+    // 在删除前算好下一首要播的曲目（删除后 zustand 闭包里的 tracks 还是旧的）
+    let nextTrack: Track | undefined;
+    if (wasPlaying && !isLastTrack) {
+      const nextIndex = index < remaining ? index : index - 1;
+      nextTrack = playlist.tracks[nextIndex];
+    }
 
     playlist.deleteTrack(index);
 
     if (wasPlaying && isLastTrack) {
       pauseAudioLocal();
-    } else if (wasPlaying) {
-      const nextIndex = index < playlist.tracks.length - 1 ? index + 1 : index - 1;
-      const nextTrack = playlist.tracks[nextIndex];
-      if (nextTrack) playTrack(nextTrack);
+    } else if (nextTrack) {
+      playTrack(nextTrack);
     }
   }, [playlist.tracks, playlist.currentIndex, isPlaying, playlist.deleteTrack, playTrack]);
 

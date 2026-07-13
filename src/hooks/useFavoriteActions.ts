@@ -2,24 +2,16 @@ import { useCallback } from 'react';
 import type { Track, FavoriteFolder } from '@/types';
 import { getVideoInfo, getPlaylist } from '@/services/api';
 import { isSameTrack } from '@/utils/track';
+import { parseInput } from '@/utils/bilibili';
 
 interface FavoritesStore {
   favorites: FavoriteFolder[];
   setFavorites: (favorites: FavoriteFolder[]) => void;
   addTrackToFavorite: (favId: string, track: Track) => void;
+  addTracksToFavorite: (favId: string, tracks: Track[]) => number;
   removeTrackFromFavorite: (favId: string, trackIndex: number) => void;
   deleteFavorite: (favId: string) => void;
   reorderFavoriteTracks: (favId: string, fromIndex: number, toIndex: number) => void;
-}
-
-const BV_RE = /BV[a-zA-Z0-9]+/i;
-const PLAYLIST_RE = /medialist\/play\/dlista\/\d+\/\d+|space\.bilibili\.com\/\d+\/favlist\?.*fid=\d+/;
-
-function parseInput(input: string): { type: 'playlist'; url: string } | { type: 'bvid'; bvid: string } | null {
-  if (PLAYLIST_RE.test(input)) return { type: 'playlist', url: input };
-  const m = input.match(BV_RE);
-  if (m) return { type: 'bvid', bvid: m[0] };
-  return null;
 }
 
 interface UseFavoriteActionsOpts {
@@ -67,15 +59,8 @@ export function useFavoriteActions({
         const res = await getPlaylist(parsed.url);
         if (!res.success) throw new Error(res.error);
         const tracks = res.data as unknown as Track[];
-        let added = 0;
-        for (const track of tracks) {
-          const before = favorites.favorites.find(f => f.id === favId)?.tracks ?? [];
-          if (!before.some(t => isSameTrack(t, track))) {
-            favorites.addTrackToFavorite(favId, track);
-            added++;
-          }
-        }
-        showNotification(`已添加 ${added} 首歌曲到收藏夹`);
+        const added = favorites.addTracksToFavorite(favId, tracks);
+        showNotification(added > 0 ? `已添加 ${added} 首歌曲到收藏夹` : '歌曲已在收藏夹中');
       } else {
         const res = await getVideoInfo(parsed.bvid);
         if (!res.success) throw new Error(res.error);

@@ -9,6 +9,7 @@ interface FavoritesState {
 interface FavoritesActions {
   setFavorites: (favorites: FavoriteFolder[]) => void;
   addTrackToFavorite: (favId: string, track: Track) => void;
+  addTracksToFavorite: (favId: string, tracks: Track[]) => number;
   removeTrackFromFavorite: (favId: string, trackIndex: number) => void;
   deleteFavorite: (favId: string) => void;
   reorderFavoriteTracks: (favId: string, fromIndex: number, toIndex: number) => void;
@@ -35,6 +36,27 @@ export const useFavoritesStore = create<FavoritesState & FavoritesActions>((set,
     });
     set({ favorites: next });
     persist(next);
+  },
+
+  addTracksToFavorite: (favId, tracks) => {
+    const { favorites } = get();
+    let added = 0;
+    const next = favorites.map(f => {
+      if (f.id !== favId) return f;
+      const existing = new Set(f.tracks.map(t => `${t.bvid}:${t.cid}`));
+      const newTracks = tracks.filter(t => {
+        const key = `${t.bvid}:${t.cid}`;
+        if (existing.has(key)) return false;
+        existing.add(key);
+        added++;
+        return true;
+      });
+      if (newTracks.length === 0) return f;
+      return { ...f, tracks: [...f.tracks, ...newTracks], updatedAt: Date.now() };
+    });
+    set({ favorites: next });
+    persist(next);
+    return added;
   },
 
   removeTrackFromFavorite: (favId, trackIndex) => {
