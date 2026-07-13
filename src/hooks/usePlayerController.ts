@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { Track, CurrentAudio, PlayMode } from '@/types';
 import { pauseAudioLocal, resumeAudioLocal, getVideoInfo, getPlaylist } from '@/services/api';
 import { parseInput } from '@/utils/bilibili';
@@ -66,9 +66,13 @@ export function usePlayerController({
     if (index < 0 || index >= playlist.tracks.length) return;
     const track = playlist.tracks[index]!;
     playlist.setCurrentIndex(index);
-    await playTrack(track);
-    recent.addRecentTrack(track);
-  }, [playlist, playTrack, recent]);
+    const ok = await playTrack(track);
+    if (ok) {
+      recent.addRecentTrack(track);
+    } else {
+      showNotification('播放失败，请稍后重试');
+    }
+  }, [playlist, playTrack, recent, showNotification]);
 
   const handleDeleteTrack = useCallback((index: number) => {
     const track = playlist.tracks[index];
@@ -136,14 +140,28 @@ export function usePlayerController({
   const handleNextButton = useCallback(async () => {
     if (playlist.tracks.length === 0) return;
     let nextIndex: number;
-    if (playlist.playMode === 'single') nextIndex = playlist.currentIndex;
-    else if (playlist.playMode === 'shuffle') nextIndex = Math.floor(Math.random() * playlist.tracks.length);
-    else nextIndex = (playlist.currentIndex + 1) % playlist.tracks.length;
+    if (playlist.playMode === 'single') {
+      nextIndex = playlist.currentIndex;
+    } else if (playlist.playMode === 'shuffle') {
+      if (playlist.tracks.length === 1) {
+        nextIndex = 0;
+      } else {
+        do {
+          nextIndex = Math.floor(Math.random() * playlist.tracks.length);
+        } while (nextIndex === playlist.currentIndex);
+      }
+    } else {
+      nextIndex = (playlist.currentIndex + 1) % playlist.tracks.length;
+    }
     const track = playlist.tracks[nextIndex];
     if (!track) return;
     const ok = await playTrack(track);
-    if (ok) playlist.setCurrentIndex(nextIndex);
-  }, [playlist.currentIndex, playlist.playMode, playlist.tracks, playTrack]);
+    if (ok) {
+      playlist.setCurrentIndex(nextIndex);
+    } else {
+      showNotification('播放失败，请稍后重试');
+    }
+  }, [playlist.currentIndex, playlist.playMode, playlist.tracks, playTrack, showNotification]);
 
   const handlePrevButton = useCallback(async () => {
     if (playlist.tracks.length === 0) return;
@@ -151,10 +169,14 @@ export function usePlayerController({
     const track = playlist.tracks[prevIndex];
     if (!track) return;
     const ok = await playTrack(track);
-    if (ok) playlist.setCurrentIndex(prevIndex);
-  }, [playlist.currentIndex, playlist.tracks, playTrack]);
+    if (ok) {
+      playlist.setCurrentIndex(prevIndex);
+    } else {
+      showNotification('播放失败，请稍后重试');
+    }
+  }, [playlist.currentIndex, playlist.tracks, playTrack, showNotification]);
 
-  return {
+  return useMemo(() => ({
     handlePlayPause,
     handleNextButton,
     handlePrevButton,
@@ -165,5 +187,16 @@ export function usePlayerController({
     handleInputSubmit,
     addTrackToPlaylistAndPlay,
     loading,
-  };
+  }), [
+    handlePlayPause,
+    handleNextButton,
+    handlePrevButton,
+    handlePlayTrack,
+    handleDeleteTrack,
+    handleClearPlaylist,
+    handleReorderTracks,
+    handleInputSubmit,
+    addTrackToPlaylistAndPlay,
+    loading,
+  ]);
 }

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { Track, FavoriteFolder } from '@/types';
 import { getVideoInfo, getPlaylist } from '@/services/api';
 import { isSameTrack } from '@/utils/track';
@@ -93,7 +93,7 @@ export function useFavoriteActions({
     }
   }, [playlistTracks, handlePlayTrack, addTrackToPlaylistAndPlay]);
 
-  return {
+  return useMemo(() => ({
     handleCreateFavorite,
     handlePlayFromFavorite,
     handleRemoveFromFavorite,
@@ -102,5 +102,14 @@ export function useFavoriteActions({
     handleAddToFavorite,
     handleAddToFavoriteFromInput,
     handleAddAllToPlaylist,
-  };
+  }), [
+    handleCreateFavorite,
+    handlePlayFromFavorite,
+    handleRemoveFromFavorite,
+    handleDeleteFavorite,
+    handleReorderFavTracks,
+    handleAddToFavorite,
+    handleAddToFavoriteFromInput,
+    handleAddAllToPlaylist,
+  ]);
 }

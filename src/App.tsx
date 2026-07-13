@@ -17,23 +17,29 @@ function App() {      //数据
   const windowStore = useWindowStore();     //窗口store
   const recent = useRecentStore();      //最近播放store
   const [notification, setNotification] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   //启动时从磁盘恢复数据
   useEffect(() => {
-    windowStore.loadFromStore();
-    recent.loadFromStore();
     (async () => {
+      await Promise.all([
+        windowStore.loadFromStore(),
+        recent.loadFromStore(),
+      ]);
       const api = window.electronAPI;
-      if (!api) return;
-      const stored = await api.storeGet('playlist');
-      if (stored?.tracks) {
-        playlist.setTracks(stored.tracks);
-        playlist.setCurrentIndex(stored.currentIndex ?? 0);
+      if (api) {
+        const storedTracks = await api.storeGet('playlistTracks');
+        const storedIndex = await api.storeGet('playlistIndex');
+        if (storedTracks) {
+          playlist.setTracks(storedTracks);
+          playlist.setCurrentIndex(storedIndex ?? 0);
+        }
+        const mode = await api.storeGet('playMode');
+        if (mode) playlist.setPlayMode(mode);
+        const favs = await api.storeGet('favorites');
+        if (favs) favorites.setFavorites(favs);
       }
-      const mode = await api.storeGet('playMode');
-      if (mode) playlist.setPlayMode(mode);
-      const favs = await api.storeGet('favorites');
-      if (favs) favorites.setFavorites(favs);
+      setReady(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -125,11 +131,13 @@ function App() {      //数据
 
   return (
     <PlayerContext.Provider value={playerContextValue}>
-      <FloatingPlayer
-        storage={storage}
-        playerState={playerState}
-        playlistState={{ tracks: playlist.tracks, currentIndex: playlist.currentIndex, playMode: playlist.playMode }}
-      />
+      {ready && (
+        <FloatingPlayer
+          storage={storage}
+          playerState={playerState}
+          playlistState={{ tracks: playlist.tracks, currentIndex: playlist.currentIndex, playMode: playlist.playMode }}
+        />
+      )}
     </PlayerContext.Provider>
   );
 }

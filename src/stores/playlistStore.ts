@@ -31,12 +31,12 @@ export const usePlaylistStore = create<PlaylistState & PlaylistActions>((set, ge
 
   setTracks: (tracks) => {
     set({ tracks });
-    persist('playlist', { tracks, currentIndex: get().currentIndex });
+    persist('playlistTracks', tracks);
   },
 
   setCurrentIndex: (currentIndex) => {
     set({ currentIndex });
-    persist('playlist', { tracks: get().tracks, currentIndex });
+    persist('playlistIndex', currentIndex);
   },
 
   setPlayMode: (playMode) => {
@@ -47,11 +47,11 @@ export const usePlaylistStore = create<PlaylistState & PlaylistActions>((set, ge
   setLoading: (loading) => set({ loading }),
 
   addTrack: (track) => {
-    const { tracks, currentIndex } = get();
+    const { tracks } = get();
     if (tracks.some(t => isSameTrack(t, track))) return;
     const next = [...tracks, track];
     set({ tracks: next });
-    persist('playlist', { tracks: next, currentIndex });
+    persist('playlistTracks', next);
   },
 
   deleteTrack: (index) => {
@@ -63,7 +63,8 @@ export const usePlaylistStore = create<PlaylistState & PlaylistActions>((set, ge
     else if (index === currentIndex && next.length > 0) newIndex = Math.min(index, next.length - 1);
     else if (next.length === 0) newIndex = 0;
     set({ tracks: next, currentIndex: newIndex });
-    persist('playlist', { tracks: next, currentIndex: newIndex });
+    persist('playlistTracks', next);
+    persist('playlistIndex', newIndex);
   },
 
   reorderTracks: (fromIndex, toIndex) => {
@@ -77,6 +78,7 @@ export const usePlaylistStore = create<PlaylistState & PlaylistActions>((set, ge
     else if (fromIndex < currentIndex && toIndex >= currentIndex) newIndex = currentIndex - 1;
     else if (fromIndex > currentIndex && toIndex <= currentIndex) newIndex = currentIndex + 1;
     set({ tracks: next, currentIndex: newIndex });
-    persist('playlist', { tracks: next, currentIndex: newIndex });
+    persist('playlistTracks', next);
+    if (newIndex !== currentIndex) persist('playlistIndex', newIndex);
   },
 }));

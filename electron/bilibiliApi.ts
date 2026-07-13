@@ -1,6 +1,7 @@
 // electron/bilibiliApi.ts
 const PLAYLIST_PAGE_SIZE = 20;
 const AUDIO_URL_EXPIRY_MS = 10 * 60 * 1000;
+const VIDEO_INFO_CONCURRENCY = 5;
 
 export async function getVideoInfo(bvid: string) {
   const res = await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`, {
@@ -34,28 +35,34 @@ export async function getPlaylistVideos(_mid: string, seasonId: string) {
     if (!data.data?.has_more || medias.length < PLAYLIST_PAGE_SIZE) break;
     pn++;
   }
-  const results = await Promise.all(all.map(async (item: any) => {
-    try {
-      const info = await getVideoInfo(item.bvid);
-      return {
-        bvid: item.bvid,
-        cid: info.cid,
-        title: item.title,
-        author: item.upper?.name || '',
-        cover: item.cover,
-        duration: item.duration,
-      };
-    } catch {
-      return {
-        bvid: item.bvid,
-        cid: 0,
-        title: item.title,
-        author: item.upper?.name || '',
-        cover: item.cover,
-        duration: item.duration,
-      };
-    }
-  }));
+  // 限制并发避免被 B站 API 限流
+  const results: any[] = [];
+  for (let i = 0; i < all.length; i += VIDEO_INFO_CONCURRENCY) {
+    const batch = all.slice(i, i + VIDEO_INFO_CONCURRENCY);
+    const batchResults = await Promise.all(batch.map(async (item: any) => {
+      try {
+        const info = await getVideoInfo(item.bvid);
+        return {
+          bvid: item.bvid,
+          cid: info.cid,
+          title: item.title,
+          author: item.upper?.name || '',
+          cover: item.cover,
+          duration: item.duration,
+        };
+      } catch {
+        return {
+          bvid: item.bvid,
+          cid: 0,
+          title: item.title,
+          author: item.upper?.name || '',
+          cover: item.cover,
+          duration: item.duration,
+        };
+      }
+    }));
+    results.push(...batchResults);
+  }
   return results;
 }
 

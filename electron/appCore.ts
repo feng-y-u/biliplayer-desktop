@@ -7,7 +7,8 @@ export const appCore = {
   store: new Store<{
     volume: number;
     playMode: 'loop' | 'single' | 'shuffle';
-    playlist: { tracks: any[]; currentIndex: number };
+    playlistTracks: any[];
+    playlistIndex: number;
     favorites: any[];
     recentTracks: any[];
     windowPosition: { left: number; top: number };
