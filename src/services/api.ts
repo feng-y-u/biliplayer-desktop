@@ -43,7 +43,8 @@ export async function loadAudioTrack(bvid: string, cid: number): Promise<{ url: 
     currentBvid = bvid;
     currentCid = cid;
     return { url: res.data.url, expiresAt: res.data.expiresAt };
-  } catch {
+  } catch (e) {
+    console.error('[api] loadAudioTrack 失败:', (e as Error).message);
     return null;
   }
 }
@@ -67,16 +68,28 @@ export async function playAudioLocal(bvid: string, cid: number, _title: string) 
           audio.addEventListener('error', onError);
         });
       }
+      // 等待至少 2 秒缓冲，防止蓝牙 A2DP 初始化期间"空转无声音"
+      while (audio.buffered.length > 0 && audio.buffered.end(0) < 2) {
+        await new Promise(r => setTimeout(r, 100));
+      }
     }
     await audio.play();
     return { success: true };
   } catch (e) {
-    return { success: false, error: (e as Error).message };
+    const msg = (e as Error).message;
+    console.error('[api] playAudioLocal 失败:', msg);
+    return { success: false, error: msg };
   }
 }
 
 export function pauseAudioLocal() { audioEl?.pause(); }
-export function resumeAudioLocal() { audioEl?.play(); }
+export async function resumeAudioLocal() {
+  if (!audioEl) return;
+  if (currentUrl && currentExpiresAt < Date.now() + URL_REFRESH_THRESHOLD_MS) {
+    await refreshAudioUrl(currentBvid, currentCid);
+  }
+  if (audioEl.paused) await audioEl.play().catch(() => {});
+}
 export function seekAudioLocal(time: number) { if (audioEl) audioEl.currentTime = time; }
 export function setVolumeLocal(volume: number) { if (audioEl) audioEl.volume = volume; }
 
@@ -85,16 +98,18 @@ export function getAudioElement(): HTMLAudioElement | null {
 }
 
 export async function refreshAudioUrl(bvid: string, cid: number) {
-  const res = await getAudioUrl(bvid, cid);
-  if (res.success) {
+  try {
+    const res = await getAudioUrl(bvid, cid);
+    if (!res.success) return;
     currentUrl = res.data.url;
     currentExpiresAt = res.data.expiresAt;
-    if (audioEl) {
-      const wasPlaying = !audioEl.paused;
-      const pos = audioEl.currentTime;
-      audioEl.src = res.data.url;
-      audioEl.currentTime = pos;
-      if (wasPlaying) audioEl.play();
-    }
+    if (!audioEl) return;
+    const wasPlaying = !audioEl.paused;
+    const pos = audioEl.currentTime;
+    audioEl.src = res.data.url;
+    audioEl.currentTime = pos;
+    if (wasPlaying) await audioEl.play().catch(() => {});
+  } catch (e) {
+    console.error('[api] refreshAudioUrl 失败:', (e as Error).message);
   }
 }

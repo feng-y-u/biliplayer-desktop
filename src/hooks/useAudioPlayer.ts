@@ -42,6 +42,12 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
       const onEnded = () => onTrackEndRef.current?.();
       const onError = () => {
         if (el.error && el.error.code !== MediaError.MEDIA_ERR_ABORTED) {
+          console.error('[useAudioPlayer] 音频错误:', {
+            code: el.error.code,
+            message: el.error.message,
+            src: el.currentSrc || el.src,
+            networkState: el.networkState,
+          });
           onTrackEndRef.current?.();
         }
       };
@@ -115,7 +121,7 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
 
   const playPause = useCallback(async () => {
     if (isPlayingRef.current) pauseAudioLocal();
-    else resumeAudioLocal();
+    else await resumeAudioLocal();
   }, []);
 
   const playTrack = useCallback(async (track: Track): Promise<boolean> => {
@@ -128,6 +134,8 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
         volume: prev.volume,
         currentAudio: { bvid: track.bvid, cid: track.cid, title: track.title, author: track.author, cover: track.cover },
       }));
+    } else {
+      console.error('[useAudioPlayer] playTrack 失败:', result.error);
     }
     return result.success;
   }, []);

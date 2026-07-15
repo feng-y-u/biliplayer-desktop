@@ -1,5 +1,5 @@
 // electron/windowManager.ts
-import { BrowserWindow, screen, globalShortcut } from 'electron';
+import { BrowserWindow, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { appCore } from './appCore';
@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 const THUMB_WIDTH = 64;
 const THUMB_HEIGHT = 64;
 const WINDOW_OFFSET = 40;
-const BILIBILI_CDN_URLS = ['*://*.hdslb.com/*', '*://*.bilivideo.com/*', '*://*.bilibili.com/*'];
+const BILIBILI_CDN_URLS = ['*://*.hdslb.com/*', '*://*.bilivideo.com/*', '*://*.bilibili.com/*', '*://*.mountaintoys.cn/*'];
 
 export function createWindow() {
   const display = screen.getPrimaryDisplay();
@@ -65,8 +65,8 @@ export function createWindow() {
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
-    globalShortcut.register('F12', () => {
-      mainWindow?.webContents.toggleDevTools();
+    mainWindow.webContents.on('before-input-event', (_e, input) => {
+      if (input.key === 'F12') mainWindow?.webContents.toggleDevTools();
     });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
