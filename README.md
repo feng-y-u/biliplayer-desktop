@@ -1,110 +1,145 @@
-# 本地方案 — B站收藏夹播放器
+<div align="center">
+  <img src="player_256x256.ico" width="64" height="64" alt="logo" />
+  <h1>Piliplayer</h1>
+  <p>
+    <strong>B站收藏夹悬浮播放器</strong>
+  </p>
+  <p>
+    将你的 Bilibili 收藏夹变为一个始终置顶的常驻小窗
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/Electron-33-47848F?logo=electron" alt="Electron" />
+    <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" alt="React" />
+    <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/Vite-646CFF?logo=vite" alt="Vite" />
+    <img src="https://img.shields.io/badge/Zustand-443E38" alt="Zustand" />
+  </p>
+  <br />
+</div>
 
-基于 Electron 的桌面悬浮窗播放器，将 B站收藏夹音频独立为常驻小窗，随用随开。
+## ✨ 特性
 
-## 技术栈
+- **悬浮窗** — 无边框透明窗口，始终置顶，不干扰工作流
+- **收藏夹播放** — 粘贴 Bilibili 收藏夹链接即可播放
+- **音质优先** — 后台载入 Bilibili DASH 音频流，支持后台播放
+- **持久化** — 窗口位置、播放列表、播放进度自动保存
+- **多模式** — 列表循环 / 单曲循环 / 随机播放
 
-- **Electron 33** — 桌面窗口管理
-- **React 18** — UI
-- **TypeScript** — 类型安全（strict 模式）
-- **Vite** — 构建
-- **Zustand** — 状态管理
-- **electron-store** — 本地持久化
-
-## 架构
-
-```
-electron/
-├── main.ts         # 主进程：创建窗口、Bilibili API 代理、IPC 处理
-├── preload.ts      # 预加载脚本（类型源文件）
-├── preload.cjs     # 运行时使用的 CJS 变体（与 .ts 同步编辑）
-└── __tests__/      # 集成测试
-
-src/
-├── main.tsx                # React 入口
-├── App.tsx                 # 根组件
-├── types/
-│   ├── index.ts            # 领域模型（Track, PlayMode, FavoriteFolder 等）
-│   ├── api.ts              # API 接口（VideoInfo, AudioUrl）
-│   └── ipc.ts              # IPC 契约（严格类型）
-├── services/api.ts         # 渲染进程 IPC 封装 + 全局 HTMLAudioElement
-├── stores/
-│   ├── playlistStore.ts    # 播放列表、当前索引、播放模式
-│   ├── favoritesStore.ts   # 收藏夹管理
-│   ├── recentStore.ts      # 最近播放（上限 50 条）
-│   └── windowStore.ts      # 窗口位置、大小、音量（防抖批量写入）
-├── hooks/
-│   ├── useAudioPlayer.ts       # HTMLAudioElement 生命周期管理
-│   ├── usePlayerController.ts  # 播放列表 CRUD + 导航
-│   ├── useFavoriteActions.ts   # 收藏夹 CRUD
-│   └── useDragReorder.ts       # 拖拽排序
-├── components/
-│   └── floating-player/
-│       ├── FloatingPlayer.tsx   # 折叠缩略图 + 拖拽 + 展开面板
-│       ├── ExpandedPanel.tsx    # 完整播放器 UI
-│       ├── Playlist.tsx         # 播放列表
-│       ├── ModeIcon.tsx         # 播放模式图标
-│       ├── FavoritesTab.tsx     # 收藏夹面板
-│       └── RecentTab.tsx        # 最近播放面板
-└── styles/
-    ├── tokens.css       # 设计令牌（CSS 自定义属性）
-    └── global.css       # 全局重置
-```
-
-## 快速开始
+## 🚀 快速开始
 
 ```bash
-cd 本地方案
-npm install                     # 首次安装依赖
-npm run dev                     # 启动开发模式（Vite + Electron 热重载）
-npm run build                   # 构建生产版本
-npm run test                    # 运行测试
-npm run dist                    # 打包为安装程序
+npm install
+npm run dev       # 开发模式（热重载）
+npm run build     # 构建生产版本
+npm run test      # 运行测试
+npm run dist      # 打包为安装程序
 ```
 
-## 核心设计
-
-### 双进程架构
-
-严格上下文隔离。渲染进程不直接发起网络请求——所有 Bilibili API 调用通过 IPC 转发到主进程。
+## 🏗 架构
 
 ```
-用户操作 → React 组件 → api.ts (IPC invoke) → electron/main.ts (fetch) → Bilibili API
-                                                      ↓
-                                               electron-store (持久化)
+用户操作
+    ↓
+React 组件
+    ↓ (IPC invoke)
+主进程 (fetch) ──→ Bilibili API
+    ↓
+electron-store (持久化)
 ```
 
-### 窗口行为
+### 双进程
 
-- `alwaysOnTop: true` — 始终在最上层，不干扰主工作流
-- `frame: false` — 无标题栏，完全自定义拖拽
-- `transparent: true` — 透明背景，仅显示播放器本体
-- 窗口位置/大小持久化，重启应用恢复上次位置
-- 三种缩放尺寸（折叠缩略图 / 展开面板 / 手动调整）
+| 进程 | 职责 | 技术 |
+|---|---|---|
+| **主进程** | 窗口管理、Bilibili API 代理、持久化 | Electron 33 |
+| **预加载** | 安全的 IPC 桥梁 | `contextBridge` + `ipcRenderer` |
+| **渲染进程** | UI、播放控制 | React 18 + Zustand |
 
-### API 代理
+渲染进程永远不直接 `fetch`——所有 API 请求通过 IPC 转发到主进程，避免 CORS 问题。
 
-所有 Bilibili 请求在主进程发出，避免 CORS 限制。支持获取视频信息、收藏夹列表和音频流地址。Bilibili CDN 请求自动注入 `Referer` 头。
+### 窗口
 
-### 音频播放
+- 无边框、透明、`alwaysOnTop`
+- 折叠态（64×64 缩略图）→ 展开面板 → 手动缩放
+- 位置/大小持久化，重启恢复
 
-渲染进程内管理全局 `HTMLAudioElement` 单例：
+## 📦 项目结构
 
-- 加载音频时通过 IPC 获取 Bilibili 音频流地址（~10 分钟有效期）
-- 播放中每 60 秒自动刷新地址，防止过期
-- 播放前检查剩余有效期，不足 5 分钟则强制刷新
+```
+electron/              # 主进程
+├── main.ts            # 入口：禁用硬件加速、引导窗口
+├── windowManager.ts   # 窗口创建、CDN Referer 注入、DevTools
+├── ipcHandlers.ts     # API / Store / 窗口 IPC 处理
+├── bilibiliApi.ts     # B站 API fetch（纯函数）
+├── appCore.ts         # 单例（窗口引用 + electron-store）
+├── preload.ts         # contextBridge 桥接（与 preload.cjs 同步编辑）
+└── preload.cjs        # 运行时 CJS 变体
 
-### 持久化
+src/                   # 渲染进程
+├── main.tsx           # React 入口
+├── App.tsx            # 根组件（组合 stores + hooks）
+├── services/api.ts    # IPC 封装 + 全局 HTMLAudioElement 单例
+├── stores/            # Zustand（播放列表 / 收藏夹 / 最近 / 窗口）
+│   ├── playlistStore.ts
+│   ├── favoritesStore.ts
+│   ├── recentStore.ts
+│   └── windowStore.ts
+├── hooks/             # 播放 / 拖拽 / 缩放 / 动画
+│   ├── useAudioPlayer.ts
+│   ├── usePlayerController.ts
+│   ├── useFavoriteActions.ts
+│   ├── useDrag.ts
+│   ├── useResize.ts
+│   ├── useDragReorder.ts
+│   └── useLerpAnimation.ts
+├── components/        # UI
+│   └── floating-player/
+│       ├── FloatingPlayer.tsx   # 折叠缩略图 + 拖拽
+│       ├── ExpandedPanel.tsx    # 展开面板（三标签）
+│       ├── Playlist.tsx
+│       ├── FavoritesTab.tsx
+│       ├── RecentTab.tsx
+│       └── ModeIcon.tsx
+├── styles/
+│   ├── tokens.css     # 设计令牌（CSS 自定义属性）
+│   └── global.css     # 全局重置
+└── types/
+    ├── index.ts       # 领域模型
+    ├── api.ts         # API 接口
+    ├── ipc.ts         # IPC 契约
+    └── electron.d.ts  # window.electronAPI
+```
 
-使用 `electron-store` 替代浏览器 `storage.local`，持久化内容包括：
+## 🔧 播放策略
 
-| 数据 | 写入策略 |
-|---|---|
-| 播放列表、播放模式 | 每次操作即时写入 |
-| 收藏夹 | 每次操作即时写入 |
-| 最近播放（最多 50 条） | 每次操作即时写入 |
-| 窗口位置、大小、音量 | 防抖批量（100ms 合并） |
+Bilibili 音频 URL **约 10 分钟过期**，代码通过两层机制保证持续播放：
 
-### 状态管理
+- **主动刷新** — 播放中每 60 秒拉取新 URL
+- **被动检查** — 恢复播放时检查 URL 是否将过期，过期则先刷新
+- **缓冲充足** — `canplaythrough` 事件确保足够缓冲后再开始播放，避免蓝牙 A2DP 延迟导致无声
+- **CDN 兼容** — 主进程 `webRequest` 自动注入 `Referer` + `User-Agent`，覆盖已知 Bilibili CDN 域名
 
-四个 Zustand store 分别管理不同模块的状态，均通过 IPC 与 `electron-store` 同步。
+## 📝 开发
+
+```bash
+# 类型检查
+npx tsc --noEmit
+
+# 运行测试
+npm run test
+npm run test:watch
+
+# 单个测试文件
+npx vitest run <文件路径>
+
+# 手动启动（vite-plugin-electron 异常时备用）
+node dev.mjs
+
+# 打包
+npm run pack   # 未打包输出
+npm run dist   # 安装包
+```
+
+## 📄 许可
+
+MIT
