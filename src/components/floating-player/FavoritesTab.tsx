@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { FavoriteFolder } from '@/types';
 import { useDragReorder } from '@/hooks/useDragReorder';
 import { usePlayerContext } from '@/contexts/PlayerContext';
+import favStyles from './FavoritesTab.module.css';
 
 function getFavIconStyle(fav: FavoriteFolder): React.CSSProperties {
   const cover = fav.tracks[0]?.cover;
@@ -45,16 +46,16 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
     });
 
   return (
-    <div className="ep-fav-view">
+    <div className={favStyles['ep-fav-view']}>
       {favorites.length === 0 ? (
-        <div className="ep-fav-empty">
-          <div className="ep-fav-empty-icon">📁</div>
-          <div className="ep-fav-empty-title">还没有收藏夹</div>
-          <div className="ep-fav-empty-desc">
+        <div className={favStyles['ep-fav-empty']}>
+          <div className={favStyles['ep-fav-empty-icon']}>📁</div>
+          <div className={favStyles['ep-fav-empty-title']}>还没有收藏夹</div>
+          <div className={favStyles['ep-fav-empty-desc']}>
             在播放列表中点击 ♡ 收藏歌曲
           </div>
           {showCreateInput ? (
-            <div className="ep-fav-create-inline" style={{ maxWidth: '220px', margin: '0 auto' }}>
+            <div className={favStyles['ep-fav-create-inline']} style={{ maxWidth: '220px', margin: '0 auto' }}>
               <input type="text" placeholder="收藏夹名称" value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 onKeyDown={(e) => {
@@ -65,46 +66,46 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
                 }}
                 autoFocus
               />
-              <div className="ep-fav-create-actions">
-                <button className="ep-fav-create-btn" onClick={() => { if (createName.trim()) { ctx.onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
-                <button className="ep-fav-create-btn ep-fav-create-btn-cancel" onClick={() => { setShowCreateInput(false); setCreateName(''); }}>取消</button>
+              <div className={favStyles['ep-fav-create-actions']}>
+                <button className={favStyles['ep-fav-create-btn']} onClick={() => { if (createName.trim()) { ctx.onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
+                <button className={`${favStyles['ep-fav-create-btn']} ${favStyles['ep-fav-create-btn-cancel']}`} onClick={() => { setShowCreateInput(false); setCreateName(''); }}>取消</button>
               </div>
             </div>
           ) : (
-            <button className="ep-fav-empty-btn" onClick={() => setShowCreateInput(true)}>+ 新建收藏夹</button>
+            <button className={favStyles['ep-fav-empty-btn']} onClick={() => setShowCreateInput(true)}>+ 新建收藏夹</button>
           )}
         </div>
       ) : (
-        <div className="ep-fav-grid">
+        <div className={favStyles['ep-fav-grid']}>
           {favorites.map(fav => (
-            <div className={`ep-fav-card ep-fav-card-expand${expandedId === fav.id ? ' expanded' : ''}`} key={fav.id}>
-              <div className="ep-fav-header" onClick={() => toggleExpand(fav.id)}>
-                <div className="ep-fav-icon" style={getFavIconStyle(fav)}>
-                  {fav.tracks[0]?.cover ? null : <span className="ep-fav-emoji">{fav.icon.length <= 2 ? fav.icon : '♪'}</span>}
+            <div className={`${favStyles['ep-fav-card']} ${favStyles['ep-fav-card-expand']}${expandedId === fav.id ? ` ${favStyles.expanded}` : ''}`} key={fav.id}>
+              <div className={favStyles['ep-fav-header']} onClick={() => toggleExpand(fav.id)}>
+                <div className={favStyles['ep-fav-icon']} style={getFavIconStyle(fav)}>
+                  {fav.tracks[0]?.cover ? null : <span className={favStyles['ep-fav-emoji']}>{fav.icon.length <= 2 ? fav.icon : '♪'}</span>}
                 </div>
-                <div className="ep-fav-header-info">
-                  <div className="ep-fav-info">
-                    <div className="ep-fav-name">{fav.name}</div>
-                    <div className="ep-fav-count">{fav.tracks.length} 首</div>
+                <div className={favStyles['ep-fav-header-info']}>
+                  <div className={favStyles['ep-fav-info']}>
+                    <div className={favStyles['ep-fav-name']}>{fav.name}</div>
+                    <div className={favStyles['ep-fav-count']}>{fav.tracks.length} 首</div>
                   </div>
-                  <span className={`ep-fav-arrow${expandedId === fav.id ? ' open' : ''}`}>▸</span>
+                  <span className={`${favStyles['ep-fav-arrow']}${expandedId === fav.id ? ` ${favStyles.open}` : ''}`}>▸</span>
                 </div>
               </div>
               <button
-                className="ep-fav-card-del"
+                className={favStyles['ep-fav-card-del']}
                 onClick={(e) => { e.stopPropagation(); if (confirm(`删除收藏夹「${fav.name}」？`)) ctx.onDeleteFavorite(fav.id); }}
                 title="删除收藏夹"
               >✕</button>
               {fav.tracks.length > 0 && (
                 <button
-                  className="ep-fav-card-add"
+                  className={favStyles['ep-fav-card-add']}
                   onClick={(e) => { e.stopPropagation(); ctx.onAddAllToPlaylist(fav.tracks); }}
                   title="添加到播放列表"
                 >+</button>
               )}
               {expandedId === fav.id && (
-                <div className="ep-fav-tracks">
-                  <div className="ep-fav-input-row" onClick={(e) => e.stopPropagation()}>
+                <div className={favStyles['ep-fav-tracks']}>
+                  <div className={favStyles['ep-fav-input-row']} onClick={(e) => e.stopPropagation()}>
                       <input type="text" placeholder="BV 号或收藏夹链接" value={addingToFavId === fav.id ? inputValue : ''}
                         onChange={(e) => { setAddingToFavId(fav.id); setInputValue(e.target.value); }}
                         onKeyDown={async (e) => {
@@ -128,7 +129,7 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
                       </button>
                     </div>
                   {fav.tracks.length > 0 ? fav.tracks.map((track, ti) => (
-                    <div className="ep-fav-track" key={`${track.bvid}-${track.cid}`}
+                    <div className={favStyles['ep-fav-track']} key={`${track.bvid}-${track.cid}`}
                       draggable
                       onDragStart={() => handleDragStart(ti, fav.id)}
                       onDragOver={(e) => handleDragOver(e, ti)}
@@ -136,17 +137,17 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
                       onDrop={(e) => handleDrop(e, ti)}
                       onDragEnd={handleDragEnd}
                     >
-                      <div className="ep-fav-track-info" onClick={() => ctx.onPlayFromFavorite(track)}>
-                        <div className="ep-fav-track-title" title={track.title}>{track.title}</div>
-                        <div className="ep-fav-track-artist">{track.author}</div>
+                      <div className={favStyles['ep-fav-track-info']} onClick={() => ctx.onPlayFromFavorite(track)}>
+                        <div className={favStyles['ep-fav-track-title']} title={track.title}>{track.title}</div>
+                        <div className={favStyles['ep-fav-track-artist']}>{track.author}</div>
                       </div>
-                      <button className="ep-fav-track-del" onClick={(e) => {
+                      <button className={favStyles['ep-fav-track-del']} onClick={(e) => {
                           e.stopPropagation();
                           ctx.onRemoveFromFavorite(fav.id, ti);
                         }} title="移出收藏夹">✕</button>
                     </div>
                   )) : (
-                    <div className="ep-empty" style={{ padding: '16px 12px' }}>
+                    <div className={favStyles['ep-empty']} style={{ padding: '16px 12px' }}>
                       暂无歌曲，在播放列表中点击 ♡ 收藏
                     </div>
                   )}
@@ -155,7 +156,7 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
             </div>
           ))}
           {showCreateInput ? (
-            <div className="ep-fav-create-inline">
+            <div className={favStyles['ep-fav-create-inline']}>
               <input type="text" placeholder="收藏夹名称" value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 onKeyDown={(e) => {
@@ -166,15 +167,15 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
                 }}
                 autoFocus
               />
-              <div className="ep-fav-create-actions">
-                <button className="ep-fav-create-btn" onClick={() => { if (createName.trim()) { ctx.onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
-                <button className="ep-fav-create-btn ep-fav-create-btn-cancel" onClick={() => { setShowCreateInput(false); setCreateName(''); }}>取消</button>
+              <div className={favStyles['ep-fav-create-actions']}>
+                <button className={favStyles['ep-fav-create-btn']} onClick={() => { if (createName.trim()) { ctx.onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
+                <button className={`${favStyles['ep-fav-create-btn']} ${favStyles['ep-fav-create-btn-cancel']}`} onClick={() => { setShowCreateInput(false); setCreateName(''); }}>取消</button>
               </div>
             </div>
           ) : (
-            <div className="ep-fav-card ep-fav-new" onClick={() => setShowCreateInput(true)}>
-              <div className="ep-fav-new-icon">+</div>
-              <div className="ep-fav-new-label">新建收藏夹</div>
+            <div className={`${favStyles['ep-fav-card']} ${favStyles['ep-fav-new']}`} onClick={() => setShowCreateInput(true)}>
+              <div className={favStyles['ep-fav-new-icon']}>+</div>
+              <div className={favStyles['ep-fav-new-label']}>新建收藏夹</div>
             </div>
           )}
         </div>

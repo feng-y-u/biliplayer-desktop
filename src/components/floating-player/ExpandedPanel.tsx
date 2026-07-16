@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './panel.css';
 import './controls.css';
-import './content.css';
+import panelStyles from './ExpandedPanel.module.css';
 import Playlist from './Playlist';
 import FavoritesTab from './FavoritesTab';
 import RecentTab from './RecentTab';
@@ -154,7 +154,7 @@ export default function ExpandedPanel({
         </div>
       </div>
 
-      <div className="ep-input-row" data-no-drag>
+      <div className={panelStyles['ep-input-row']} data-no-drag>
         <input type="text" placeholder="BV 号或收藏夹链接" value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
@@ -164,22 +164,22 @@ export default function ExpandedPanel({
         </button>
       </div>
 
-      <div className="ep-tabs" data-no-drag>
-        <button className={`ep-tab ${activeTab === 'playlist' ? 'active' : ''}`} onClick={() => setActiveTab('playlist')}>
+      <div className={panelStyles['ep-tabs']} data-no-drag>
+        <button className={`${panelStyles['ep-tab']}${activeTab === 'playlist' ? ` ${panelStyles.active}` : ''}`} onClick={() => setActiveTab('playlist')}>
           播放列表 ({tracks.length})
         </button>
-        <button className={`ep-tab ${activeTab === 'favs' ? 'active' : ''}`} onClick={() => setActiveTab('favs')}>
+        <button className={`${panelStyles['ep-tab']}${activeTab === 'favs' ? ` ${panelStyles.active}` : ''}`} onClick={() => setActiveTab('favs')}>
           收藏夹
         </button>
-        <button className={`ep-tab ${activeTab === 'recent' ? 'active' : ''}`} onClick={() => setActiveTab('recent')}>
+        <button className={`${panelStyles['ep-tab']}${activeTab === 'recent' ? ` ${panelStyles.active}` : ''}`} onClick={() => setActiveTab('recent')}>
           最近
         </button>
         {activeTab === 'playlist' && tracks.length > 0 && (
-          <button className="ep-tab-clear" onClick={ctx.onClearPlaylist} title="清空播放列表">清空</button>
+          <button className={panelStyles['ep-tab-clear']} onClick={ctx.onClearPlaylist} title="清空播放列表">清空</button>
         )}
       </div>
 
-      <div className="ep-content" data-no-drag>
+      <div className={panelStyles['ep-content']} data-no-drag>
         {activeTab === 'playlist' && (
           <Playlist
             tracks={tracks}
