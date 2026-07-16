@@ -8,6 +8,7 @@ import { usePlayerController } from './hooks/usePlayerController';
 import { useFavoriteActions } from './hooks/useFavoriteActions';
 import FloatingPlayer from '@/components/floating-player/FloatingPlayer';
 import { PlayerContext } from './contexts/PlayerContext';
+import { usePlayerContextValue } from './contexts/usePlayerContextValue';
 
 const NOTIFICATION_TIMEOUT_MS = 3000;
 
@@ -85,29 +86,14 @@ function App() {      //数据
     showNotification,
   });
 
-  const playerContextValue = useMemo(() => ({
-    onPlayPause: playerCtrl.handlePlayPause,
-    onPrev: playerCtrl.handlePrevButton,
-    onNext: playerCtrl.handleNextButton,
-    onSeek: seek,
-    onVolumeChange: volumeChange,
-    onPlayModeChange: playlist.setPlayMode,
-    onPlayTrack: playerCtrl.handlePlayTrack,
-    onDeleteTrack: playerCtrl.handleDeleteTrack,
-    onClearPlaylist: playerCtrl.handleClearPlaylist,
-    onReorderTracks: playerCtrl.handleReorderTracks,
-    onCreateFavorite: favActions.handleCreateFavorite,
-    onAddToFavorite: favActions.handleAddToFavorite,
-    onAddToFavoriteFromInput: favActions.handleAddToFavoriteFromInput,
-    onPlayFromFavorite: favActions.handlePlayFromFavorite,
-    onRemoveFromFavorite: favActions.handleRemoveFromFavorite,
-    onDeleteFavorite: favActions.handleDeleteFavorite,
-    onReorderFavTracks: favActions.handleReorderFavTracks,
-    onAddAllToPlaylist: favActions.handleAddAllToPlaylist,
-    onInputSubmit: playerCtrl.handleInputSubmit,
-    loading: playerCtrl.loading,
+  const playerContextValue = usePlayerContextValue({
+    playerCtrl,
+    favActions,
+    seek,
+    volumeChange,
+    setPlayMode: playlist.setPlayMode,
     notification,
-  }), [playerCtrl, favActions, seek, volumeChange, playlist.setPlayMode, notification]);
+  });
 
   const storage = useMemo(() => ({
     windowPosition: windowStore.windowPosition,

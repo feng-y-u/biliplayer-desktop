@@ -98,6 +98,9 @@ export function getAudioElement(): HTMLAudioElement | null {
 }
 
 export async function refreshAudioUrl(bvid: string, cid: number) {
+  if (bvid === currentBvid && cid === currentCid && currentUrl && currentExpiresAt > Date.now() + URL_REFRESH_THRESHOLD_MS) {
+    return;
+  }
   try {
     const res = await getAudioUrl(bvid, cid);
     if (!res.success) return;
