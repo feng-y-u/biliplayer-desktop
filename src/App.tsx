@@ -12,11 +12,11 @@ import { usePlayerContextValue } from './contexts/usePlayerContextValue';
 
 const NOTIFICATION_TIMEOUT_MS = 3000;
 
-function App() {      //数据
-  const playlist = usePlaylistStore();        //播放列表store
-  const favorites = useFavoritesStore();      //收藏夹store
-  const windowStore = useWindowStore();     //窗口store
-  const recent = useRecentStore();      //最近播放store
+function App() {
+  const playlist = usePlaylistStore();
+  const favorites = useFavoritesStore();
+  const windowStore = useWindowStore();
+  const recent = useRecentStore();
   const [notification, setNotification] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 

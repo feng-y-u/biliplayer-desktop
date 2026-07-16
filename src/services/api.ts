@@ -1,3 +1,20 @@
+/**
+ * 渲染进程的音频管理层。
+ *
+ * 职责：
+ * - 封装所有 IPC 调用，渲染进程不直接 fetch
+ * - 维护全局唯一的 HTMLAudioElement 单例（audioEl）
+ * - 管理 B 站音频 URL 缓存（有效期约 10 分钟）
+ * - 提供播放/暂停/跳转/音量等控制接口
+ *
+ * 三个核心函数的调用链：
+ *   loadAudioTrack(bvid, cid)  只缓存 URL，不操作 audioEl
+ *          ↓
+ *   playAudioLocal(bvid, cid)  调用 loadAudioTrack 获取 URL → 设置 audioEl.src → play()
+ *          ↓
+ *   refreshAudioUrl(bvid, cid) 播放中定时调用，热替换 audioEl.src（会导致短暂卡顿）
+ */
+
 const api = window.electronAPI?.api;
 
 const DEFAULT_VOLUME = 0.7;
@@ -30,7 +47,15 @@ export async function getAudioUrl(bvid: string, cid: number) {
   return api({ type: 'GET_AUDIO_URL', bvid, cid });
 }
 
-/** Preload audio URL into the global player cache without playing. */
+/**
+ * 预加载音频 URL 到全局缓存，不做任何 audioEl 操作。
+ *
+ * @remarks 如果当前缓存的 (bvid, cid) 一致且距过期 >60 秒，直接返回缓存，跳过网络请求。
+ * @param bvid - B 站视频 BV 号
+ * @param cid - B 站视频 CID
+ * @returns { url, expiresAt } 或 null（请求失败）
+ * @sideeffect 请求成功时更新模块级缓存：currentUrl / currentExpiresAt / currentBvid / currentCid
+ */
 export async function loadAudioTrack(bvid: string, cid: number): Promise<{ url: string; expiresAt: number } | null> {
   try {
     if (bvid === currentBvid && cid === currentCid && currentUrl && currentExpiresAt > Date.now() + URL_REFRESH_THRESHOLD_MS) {
@@ -49,6 +74,19 @@ export async function loadAudioTrack(bvid: string, cid: number): Promise<{ url: 
   }
 }
 
+/**
+ * 播放指定音频：从缓存或网络获取 URL → 设置 audioEl.src → 等待缓冲 → play()。
+ *
+ * @remarks
+ * - 如果 audioEl.src 与目标 URL 相同且已缓冲足够，跳过设置 src 直接 play()
+ * - 使用 `canplay` 事件而非 `canplaythrough`，等待至少 2 秒缓冲圈
+ *   解决蓝牙 A2DP 初始化延迟导致的"进度条先走、声音后到"
+ * @param bvid - B 站视频 BV 号
+ * @param cid - B 站视频 CID
+ * @param _title - 仅用于日志（当前未使用）
+ * @returns { success, error? }
+ * @sideeffect 修改 audioEl.src，启动 audioEl.play()
+ */
 export async function playAudioLocal(bvid: string, cid: number, _title: string) {
   try {
     const result = await loadAudioTrack(bvid, cid);
@@ -97,6 +135,17 @@ export function getAudioElement(): HTMLAudioElement | null {
   return audioEl;
 }
 
+/**
+ * 刷新当前音频 URL：获取新 URL 后直接替换 audioEl.src。
+ *
+ * @remarks
+ * - 如果缓存仍有效（同 (bvid,cid) + 距过期 >60 秒），跳过刷新
+ * - 替换 src 会中断当前播放，之后自动恢复位置和播放状态
+ * - 这是导致整分钟卡顿的潜在原因（配合 useAudioPlayer 60 秒定时器）
+ * @param bvid - B 站视频 BV 号
+ * @param cid - B 站视频 CID
+ * @sideeffect 替换 audioEl.src，可能中断并恢复播放
+ */
 export async function refreshAudioUrl(bvid: string, cid: number) {
   if (bvid === currentBvid && cid === currentCid && currentUrl && currentExpiresAt > Date.now() + URL_REFRESH_THRESHOLD_MS) {
     return;
