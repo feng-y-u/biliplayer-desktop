@@ -6,7 +6,7 @@ import Playlist from './Playlist';
 import FavoritesTab from './FavoritesTab';
 import RecentTab from './RecentTab';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
-import { PlayPauseIcon, NextIcon } from './Icons';
+import { PlayPauseIcon, PrevTrackIcon, NextIcon, VolumeIcon } from './Icons';
 import type { Track, PlayMode, FavoriteFolder, CurrentAudio } from '@/types';
 import { formatDuration, calcProgress } from '@/utils/format';
 import { usePlayerContext } from '@/contexts/PlayerContext';
@@ -104,7 +104,7 @@ export default function ExpandedPanel({
 
         <div className="ep-ctrl-center">
           <button className="ep-ctrl-btn" onClick={ctx.onPrev} title="上一首">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
+            <PrevTrackIcon />
           </button>
           <button className="ep-play-btn" onClick={ctx.onPlayPause} title="播放/暂停">
             <PlayPauseIcon isPlaying={isPlaying} />
@@ -118,20 +118,7 @@ export default function ExpandedPanel({
           if (volume > 0) { prevVolume.current = volume; ctx.onVolumeChange(0); }
           else ctx.onVolumeChange(prevVolume.current);
         }} title={volume > 0 ? '静音' : '恢复音量'}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {volume > 0 ? (
-              <>
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-              </>
-            ) : (
-              <>
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <line x1="23" y1="9" x2="17" y2="15" />
-                <line x1="17" y1="9" x2="23" y2="15" />
-              </>
-            )}
-          </svg>
+          <VolumeIcon muted={volume === 0} />
         </button>
         <input className="ep-vol-slider" type="range" min={0} max={1} step={0.01} value={volume}
           style={{ '--vol-pct': `${volume * 100}%` } as React.CSSProperties}

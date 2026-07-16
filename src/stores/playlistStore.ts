@@ -6,14 +6,12 @@ interface PlaylistState {
   tracks: Track[];
   currentIndex: number;
   playMode: PlayMode;
-  loading: boolean;
 }
 
 interface PlaylistActions {
   setTracks: (tracks: Track[]) => void;
   setCurrentIndex: (index: number) => void;
   setPlayMode: (mode: PlayMode) => void;
-  setLoading: (loading: boolean) => void;
   addTrack: (track: Track) => void;
   deleteTrack: (index: number) => void;
   reorderTracks: (fromIndex: number, toIndex: number) => void;
@@ -27,7 +25,6 @@ export const usePlaylistStore = create<PlaylistState & PlaylistActions>((set, ge
   tracks: [],
   currentIndex: 0,
   playMode: 'loop',
-  loading: false,
 
   setTracks: (tracks) => {
     set({ tracks });
@@ -43,8 +40,6 @@ export const usePlaylistStore = create<PlaylistState & PlaylistActions>((set, ge
     set({ playMode });
     persist('playMode', playMode);
   },
-
-  setLoading: (loading) => set({ loading }),
 
   addTrack: (track) => {
     const { tracks } = get();

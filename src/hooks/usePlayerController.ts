@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { Track, CurrentAudio, PlayMode } from '@/types';
 import { pauseAudioLocal, resumeAudioLocal, getVideoInfo, getPlaylist } from '@/services/api';
 import { parseInput } from '@/utils/bilibili';
@@ -7,11 +7,9 @@ interface PlaylistStore {
   tracks: Track[];
   currentIndex: number;
   playMode: PlayMode;
-  loading: boolean;
   setTracks: (tracks: Track[]) => void;
   setCurrentIndex: (index: number) => void;
   setPlayMode: (mode: PlayMode) => void;
-  setLoading: (loading: boolean) => void;
   addTrack: (track: Track) => void;
   deleteTrack: (index: number) => void;
   reorderTracks: (fromIndex: number, toIndex: number) => void;
@@ -41,7 +39,7 @@ export function usePlayerController({
   playPause,
   showNotification,
 }: UsePlayerControllerOpts) {
-  const [loading, setLoading] = [playlist.loading, playlist.setLoading];
+  const [loading, setLoading] = useState(false);
 
   const handlePlayPause = useCallback(() => {
     if (!currentAudio && playlist.tracks[playlist.currentIndex]) {
@@ -136,6 +134,7 @@ export function usePlayerController({
       showNotification(`加载失败：${msg}`);
     }
   }, [playlist, setLoading, showNotification]);
+  // setLoading is stable (useState dispatch), safe to include
 
   const handleNextButton = useCallback(async () => {
     if (playlist.tracks.length === 0) return;
