@@ -1,13 +1,12 @@
-import { useDrag } from '@/hooks/useDrag';
 import { useResize } from '@/hooks/useResize';
 import { useLerpAnimation } from '@/hooks/useLerpAnimation';
+import { useFloatingPlayerDrag } from '@/hooks/useFloatingPlayerDrag';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ExpandedPanel from './ExpandedPanel';
-import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
-import { PlayPauseIcon, NextIcon } from './Icons';
+import PlayerThumb from './PlayerThumb';
 import { usePlayerContext } from '@/contexts/PlayerContext';
 import './FloatingPlayer.css';
-import type { CollapsedState, PlayerState, PlaylistState, WindowPosition, WindowSize, Track, FavoriteFolder } from '@/types';
+import type { PlayerState, PlaylistState, WindowSize, Track, FavoriteFolder } from '@/types';
 
 const THUMB_WIDTH = 64;
 const THUMB_HEIGHT = 64;
@@ -15,12 +14,12 @@ const FALLBACK_SIZE: WindowSize = { width: 330, height: 700 };
 
 interface FloatingPlayerProps {
   storage: {
-    windowPosition: WindowPosition;
+    windowPosition: { left: number; top: number };
     windowSize: WindowSize;
     expandedPanelSize: WindowSize | null;
     favorites: FavoriteFolder[];
     recentTracks: Track[];
-    setWindowPosition: (p: WindowPosition) => void;
+    setWindowPosition: (p: { left: number; top: number }) => void;
     setWindowSize: (s: WindowSize) => void;
     setExpandedPanelSize: (s: WindowSize) => void;
   };
@@ -34,36 +33,36 @@ export default function FloatingPlayer({
   playlistState,
 }: FloatingPlayerProps) {
   const ctx = usePlayerContext();
-  const [collapsedState, setCollapsedState] = useState<CollapsedState>('collapsed');
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
   const collapsedPosRef = useRef<{ x: number; y: number } | null>(null);
-  // 当组件挂载时（展开状态下），存储当前的展开尺寸作为 ref，
-  // 用于收起时获取最后已知的展开大小（因为 zustand 更新可能有延迟）
+  // 用于收起时获取最后已知的展开大小（zustand 更新可能有延迟）
   const lastExpandSizeRef = useRef(storage.expandedPanelSize ?? FALLBACK_SIZE);
 
-  // 同步 ref 与 zustand 的值（当 store 从磁盘加载完成后）
   useEffect(() => {
     if (storage.expandedPanelSize) {
       lastExpandSizeRef.current = storage.expandedPanelSize;
     }
   }, [storage.expandedPanelSize]);
 
-  const { handleMouseDown: handleDragStart, didDrag } = useDrag(
-    (pos) => storage.setWindowPosition(pos),
-    (target) => {
-      if (collapsedState === 'expanded') {
-        const el = target as HTMLElement;
-        if (!el.closest('.ep-top-bar')) return false;
-        if (el.closest('[data-no-drag]')) return false;
-      }
-      return true;
+  const { handleMouseDown, wasDragging } = useFloatingPlayerDrag(expanded, storage.setWindowPosition);
+
+  const pickExpandSize = useCallback(() => {
+    return storage.expandedPanelSize ?? lastExpandSizeRef.current;
+  }, [storage.expandedPanelSize]);
+
+  const { handleResizeStart } = useResize(
+    storage.expandedPanelSize ?? FALLBACK_SIZE,
+    (size) => {
+      lastExpandSizeRef.current = size;
+      storage.setWindowSize(size);
+      storage.setExpandedPanelSize(size);
     },
   );
 
   const { animating, startAnimation } = useLerpAnimation({
     onFrame: (w, h) => window.electronAPI.windowResize(w, h),
     onCollapseEnd: () => {
-      setCollapsedState('collapsed');
+      setExpanded(false);
       if (collapsedPosRef.current) {
         window.electronAPI.windowMove(collapsedPosRef.current.x, collapsedPosRef.current.y);
       }
@@ -72,7 +71,7 @@ export default function FloatingPlayer({
     },
   });
 
-  // Set initial window size and restore saved position on mount
+  // 挂载时初始化窗口为缩略图大小，恢复保存的位置
   useEffect(() => {
     (async () => {
       const api = window.electronAPI;
@@ -87,68 +86,49 @@ export default function FloatingPlayer({
     })();
   }, []);
 
-  const { handleResizeStart } = useResize(
-    storage.expandedPanelSize ?? FALLBACK_SIZE,
-    (size) => {
-      // 拖拽结束时保存最终尺寸
-      lastExpandSizeRef.current = size;
-      storage.setWindowSize(size);
-      storage.setExpandedPanelSize(size);
-    },
-  );
+  const handleExpand = useCallback(async () => {
+    const pos = await window.electronAPI.windowGetPosition();
+    collapsedPosRef.current = { x: pos.x, y: pos.y };
 
-  const getExpandSize = useCallback(() => {
-    return storage.expandedPanelSize ?? lastExpandSizeRef.current;
-  }, [storage.expandedPanelSize]);
+    const savedPos = storage.windowPosition;
+    const expSize = pickExpandSize();
+    lastExpandSizeRef.current = expSize;
+
+    let targetW = Math.min(expSize.width, window.screen.width - 40);
+    let targetH = Math.min(expSize.height, window.screen.height - 40);
+
+    const hasSavedPosition = savedPos.left !== 0 && savedPos.top !== 0;
+    let expandedX: number;
+    let expandedY: number;
+
+    if (hasSavedPosition) {
+      expandedX = Math.max(20, Math.min(savedPos.left, window.screen.width - targetW - 20));
+      expandedY = Math.max(20, Math.min(savedPos.top, window.screen.height - targetH - 20));
+    } else {
+      expandedX = Math.max(20, Math.min(pos.x + THUMB_WIDTH / 2 - targetW / 2, window.screen.width - targetW - 20));
+      expandedY = Math.max(20, Math.min(pos.y, window.screen.height - targetH - 20));
+    }
+
+    window.electronAPI.windowMove(expandedX, expandedY);
+    setExpanded(true);
+    startAnimation('expand', { width: THUMB_WIDTH, height: THUMB_HEIGHT }, { width: targetW, height: targetH });
+  }, [storage, pickExpandSize, startAnimation]);
+
+  const handleCollapse = useCallback(async () => {
+    const pos = await window.electronAPI.windowGetPosition();
+    storage.setWindowPosition({ left: pos.x, top: pos.y });
+    storage.setExpandedPanelSize({ width: pos.width, height: pos.height });
+    startAnimation('collapse', { width: pos.width, height: pos.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
+  }, [storage, startAnimation]);
 
   const handleThumbClick = useCallback(async () => {
-    if (didDrag.current) {
-      didDrag.current = false;
+    if (wasDragging.current) {
+      wasDragging.current = false;
       return;
     }
-
-    if (collapsedState === 'collapsed') {
-      const pos = await window.electronAPI.windowGetPosition();
-      collapsedPosRef.current = { x: pos.x, y: pos.y };
-
-      // 使用保存的展开位置和大小
-      const savedPos = storage.windowPosition;
-      const expSize = getExpandSize();
-      lastExpandSizeRef.current = expSize;
-
-      let targetW = Math.min(expSize.width, window.screen.width - 40);
-      let targetH = Math.min(expSize.height, window.screen.height - 40);
-
-      let expandedX: number;
-      let expandedY: number;
-
-      // 检查是否有有效的保存位置（非默认值且不为0）
-      const hasSavedPosition = savedPos.left !== 0 && savedPos.top !== 0;
-
-      if (hasSavedPosition) {
-        expandedX = Math.max(20, Math.min(savedPos.left, window.screen.width - targetW - 20));
-        expandedY = Math.max(20, Math.min(savedPos.top, window.screen.height - targetH - 20));
-      } else {
-        const thumbCenterX = pos.x + THUMB_WIDTH / 2;
-        expandedX = thumbCenterX - targetW / 2;
-        expandedY = pos.y;
-        expandedX = Math.max(20, Math.min(expandedX, window.screen.width - targetW - 20));
-        expandedY = Math.max(20, Math.min(expandedY, window.screen.height - targetH - 20));
-      }
-
-      // 先移动窗口位置
-      window.electronAPI.windowMove(expandedX, expandedY);
-      setCollapsedState('expanded');
-      startAnimation('expand', { width: THUMB_WIDTH, height: THUMB_HEIGHT }, { width: targetW, height: targetH });
-    } else {
-      // 收起时保存当前展开位置和大小
-      const pos = await window.electronAPI.windowGetPosition();
-      storage.setWindowPosition({ left: pos.x, top: pos.y });
-      // 从 OS 实时获取当前窗口大小，与位置一样可靠
-      storage.setExpandedPanelSize({ width: pos.width, height: pos.height });
-      startAnimation('collapse', { width: pos.width, height: pos.height }, { width: THUMB_WIDTH, height: THUMB_HEIGHT });
-    }
-  }, [collapsedState, storage, didDrag, startAnimation, getExpandSize]);
+    if (expanded) await handleCollapse();
+    else await handleExpand();
+  }, [expanded, wasDragging, handleExpand, handleCollapse]);
 
   const handleClose = useCallback(async () => {
     const pos = await window.electronAPI.windowGetPosition();
@@ -158,40 +138,28 @@ export default function FloatingPlayer({
 
   return (
     <div
-      ref={containerRef}
       className={[
         'float-player',
-        collapsedState === 'expanded' && !animating && 'expanded',
+        expanded && !animating && 'expanded',
         animating === 'expand' && 'animating-expand',
         animating === 'collapse' && 'animating-collapse',
         playerState.isPlaying && 'playing',
       ].filter(Boolean).join(' ')}
-      onMouseDown={handleDragStart}
+      onMouseDown={handleMouseDown}
     >
-      {collapsedState !== 'expanded' && (
-        <>
-          <div className="hover-bar">
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); ctx.onPlayPause(); }} title="播放/暂停">
-              <PlayPauseIcon isPlaying={playerState.isPlaying} />
-            </button>
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); ctx.onNext(); }} title="下一首">
-              <NextIcon />
-            </button>
-            <button data-no-drag onClick={(e) => { e.stopPropagation(); ctx.onPlayModeChange(nextMode(playlistState.playMode)); }} title={modeTitle(playlistState.playMode)}>
-              <ModeIcon mode={playlistState.playMode} />
-            </button>
-          </div>
-          <div className={`player-thumb${playerState.isPlaying ? ' playing' : ''}`} onClick={handleThumbClick}>
-            {playerState.currentAudio?.cover ? (
-              <div className="thumb-inner" style={{ backgroundImage: `url(${playerState.currentAudio.cover})` }} />
-            ) : (
-              <span className="note-icon">♪</span>
-            )}
-          </div>
-        </>
+      {!expanded && (
+        <PlayerThumb
+          isPlaying={playerState.isPlaying}
+          currentAudio={playerState.currentAudio}
+          playMode={playlistState.playMode}
+          onPlayPause={ctx.onPlayPause}
+          onNext={ctx.onNext}
+          onPlayModeChange={ctx.onPlayModeChange}
+          onClick={handleThumbClick}
+        />
       )}
 
-      {(collapsedState === 'expanded' || animating === 'collapse') && (
+      {(expanded || animating === 'collapse') && (
         <div className="expanded-panel">
           <ExpandedPanel
             currentAudio={playerState.currentAudio}
@@ -206,7 +174,7 @@ export default function FloatingPlayer({
             recentTracks={storage.recentTracks}
             onClose={handleClose}
           />
-          {collapsedState === 'expanded' && (
+          {expanded && (
             <>
               <div className="resize-handle resize-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />
               <div className="resize-handle resize-se" onMouseDown={(e) => handleResizeStart(e, 'se')} />
