@@ -58,13 +58,13 @@ export function useFavoriteActions({
       if (parsed.type === 'playlist') {
         const res = await getPlaylist(parsed.url);
         if (!res.success) throw new Error(res.error);
-        const tracks = res.data as unknown as Track[];
+        const tracks = res.data;
         const added = favorites.addTracksToFavorite(favId, tracks);
         showNotification(added > 0 ? `已添加 ${added} 首歌曲到收藏夹` : '歌曲已在收藏夹中');
       } else {
         const res = await getVideoInfo(parsed.bvid);
         if (!res.success) throw new Error(res.error);
-        const track = res.data as unknown as Track;
+        const track = res.data;
         favorites.addTrackToFavorite(favId, track);
       }
     } catch (e) {

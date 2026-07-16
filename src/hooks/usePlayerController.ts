@@ -118,14 +118,14 @@ export function usePlayerController({
         if (parsed.type === 'playlist') {
           const res = await getPlaylist(parsed.url);
           if (!res.success) throw new Error(res.error);
-          const data = res.data as unknown as Track[];
+          const tracks = res.data;
           const existing = new Set(playlist.tracks.map(t => t.bvid));
-          const newTracks = data.filter(t => !existing.has(t.bvid));
+          const newTracks = tracks.filter(t => !existing.has(t.bvid));
           playlist.setTracks([...playlist.tracks, ...newTracks]);
         } else {
           const res = await getVideoInfo(parsed.bvid);
           if (!res.success) throw new Error(res.error);
-          const track = res.data as unknown as Track;
+          const track = res.data;
           playlist.addTrack(track);
         }
       } finally {
