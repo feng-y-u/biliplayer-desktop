@@ -39,8 +39,8 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
     function attach(el: HTMLAudioElement) {
       const onTimeUpdate = () => {
         setState(prev => ({ ...prev, currentTime: el.currentTime }));
-        // 后备逻辑：距末尾 1 秒内触发切歌
-        if (el.duration > 0 && el.currentTime >= el.duration - 1) {
+        // 后备：有些 B站音频流不会触发 ended 事件，通过 timeupdate 轮询 el.ended
+        if (el.ended) {
           if (!nearEndRef.current) {
             nearEndRef.current = true;
             onTrackEndRef.current?.();
