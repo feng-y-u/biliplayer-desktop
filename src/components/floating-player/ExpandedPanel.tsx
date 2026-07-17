@@ -93,10 +93,10 @@ export default function ExpandedPanel({
       )}
       {!currentAudio && (
         <div className="ep-now-playing">
-          <div className="ep-np-bg" style={{ backgroundImage: 'url(/player_256x256.ico)' }} />
+          <div className="ep-np-bg" style={{ backgroundImage: 'url(player_256x256.ico)' }} />
           <div className="ep-np-content">
             <div className="ep-np-cover">
-              <img src="/player_256x256.ico" alt="Piliplayer" />
+              <img src="player_256x256.ico" alt="Piliplayer" />
             </div>
           </div>
         </div>
