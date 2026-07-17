@@ -59,6 +59,11 @@ export function createWindow() {
     mainWindow?.show();
   });
 
+  // 透明无边框窗口在 Windows 上被点击获得焦点后可能被窗口管理器降级
+  mainWindow.on('focus', () => {
+    mainWindow.setAlwaysOnTop(true, 'floating');
+  });
+
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     console.error('[main] RENDERER CRASHED:', details.reason, details.exitCode);
   });

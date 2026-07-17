@@ -44,32 +44,44 @@ export async function getAudioUrl(bvid: string, cid: number) {
   return api({ type: 'GET_AUDIO_URL', bvid, cid });
 }
 
+// 防止同一曲目的并发重复 fetch
+const inflightFetches = new Map<string, Promise<{ url: string; expiresAt: number } | null>>();
+
 /**
  * 预加载音频 URL 到全局缓存，不做任何 audioEl 操作。
  *
  * @remarks 如果 audioCache 缓存命中（同曲目 + 距过期 >60 秒），直接返回，跳过网络请求。
+ * 并发调用同一 (bvid,cid) 时自动去重，只发一个 fetch。
  * @param bvid - B 站视频 BV 号
  * @param cid - B 站视频 CID
  * @returns { url, expiresAt } 或 null（请求失败）
  * @sideeffect 请求成功时更新 audioCache
  */
 export async function loadAudioTrack(bvid: string, cid: number): Promise<{ url: string; expiresAt: number } | null> {
-  try {
-    if (audioCache.isValid(bvid, cid)) {
-      const cached = audioCache.state;
-      return { url: cached.url, expiresAt: cached.expiresAt };
-    }
-    const res = await getAudioUrl(bvid, cid);
-    if (!res.success) {
-      console.error('[api] loadAudioTrack 失败:', res.error);
-      return null;
-    }
-    audioCache.save(res.data.url, res.data.expiresAt, bvid, cid);
-    return { url: res.data.url, expiresAt: res.data.expiresAt };
-  } catch (e) {
-    console.error('[api] loadAudioTrack 失败:', (e as Error).message);
-    return null;
+  if (audioCache.isValid(bvid, cid)) {
+    const cached = audioCache.state;
+    return { url: cached.url, expiresAt: cached.expiresAt };
   }
+  const key = `${bvid}:${cid}`;
+  if (inflightFetches.has(key)) return inflightFetches.get(key)!;
+  const promise = (async () => {
+    try {
+      const res = await getAudioUrl(bvid, cid);
+      if (!res.success) {
+        console.error('[api] loadAudioTrack 失败:', res.error);
+        return null;
+      }
+      audioCache.save(res.data.url, res.data.expiresAt, bvid, cid);
+      return { url: res.data.url, expiresAt: res.data.expiresAt };
+    } catch (e) {
+      console.error('[api] loadAudioTrack 失败:', (e as Error).message);
+      return null;
+    } finally {
+      inflightFetches.delete(key);
+    }
+  })();
+  inflightFetches.set(key, promise);
+  return promise;
 }
 
 /**

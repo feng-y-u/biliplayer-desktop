@@ -60,7 +60,7 @@
   transition: opacity 0.2s ease;
 }
 .float-player:not(.expanded).playing {
-  opacity: 0.6;
+  opacity: 1;
 }
 .float-player:not(.expanded):hover {
   opacity: 1;
