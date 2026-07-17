@@ -108,6 +108,7 @@ CI（`.github/workflows/ci.yml`）：push/PR 到 `main` → `npm ci` → `tsc --
 - CDN 通过 `webRequest.onBeforeSendHeaders` 注入 `Referer: https://www.bilibili.com/` + `User-Agent`（作用于 `*.hdslb.com`、`*.bilivideo.com`、`*.bilibili.com`、`*.mountaintoys.cn`）。
 - 收藏夹 API 使用 `media_id`（非 `fid`）。`parsePlaylistUrl` 处理两种 URL：`medialist/play/dlista/{seasonId}/{mid}` 和 `space.bilibili.com/{mid}/favlist?fid={seasonId}`。
 - 视频信息并发限制 `VIDEO_INFO_CONCURRENCY = 5`，单次失败返回 `cid: 0` 的兜底结果。
+- 所有主进程 API fetch 通过 `biliFetch`（`bilibiliApi.ts:9`）：15s 超时 + 2 次自动重试。
 
 ## 注意事项
 

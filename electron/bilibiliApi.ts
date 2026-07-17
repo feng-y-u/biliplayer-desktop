@@ -2,11 +2,33 @@
 const PLAYLIST_PAGE_SIZE = 20;
 const AUDIO_URL_EXPIRY_MS = 10 * 60 * 1000;
 const VIDEO_INFO_CONCURRENCY = 5;
+const FETCH_TIMEOUT_MS = 15_000;
+const FETCH_RETRIES = 2;
+const FETCH_RETRY_DELAY_MS = 1000;
+
+async function biliFetch(url: string, retries = FETCH_RETRIES): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { Referer: 'https://www.bilibili.com/', 'User-Agent': 'Mozilla/5.0' },
+      });
+      clearTimeout(timer);
+      return res;
+    } catch (e) {
+      const willRetry = attempt < retries && !(e instanceof DOMException && e.name === 'AbortError');
+      console.error(`[bilibiliApi] fetch 失败 (attempt ${attempt + 1}/${retries + 1}):`, (e as Error).message);
+      if (willRetry) await new Promise(r => setTimeout(r, FETCH_RETRY_DELAY_MS));
+      else throw e;
+    }
+  }
+  throw new Error('unreachable');
+}
 
 export async function getVideoInfo(bvid: string) {
-  const res = await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`, {
-    headers: { Referer: 'https://www.bilibili.com/', 'User-Agent': 'Mozilla/5.0' },
-  });
+  const res = await biliFetch(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`);
   const data = await res.json();
   if (data.code !== 0) throw new Error(data.message);
   return { bvid: data.data.bvid, cid: data.data.cid, title: data.data.title, author: data.data.owner.name, cover: data.data.pic, duration: data.data.duration };
@@ -24,9 +46,7 @@ export async function getPlaylistVideos(_mid: string, seasonId: string) {
   const all: any[] = [];
   let pn = 1;
   while (true) {
-    const res = await fetch(`https://api.bilibili.com/x/v3/fav/resource/list?media_id=${seasonId}&pn=${pn}&ps=${PLAYLIST_PAGE_SIZE}`, {
-      headers: { Referer: 'https://www.bilibili.com/', 'User-Agent': 'Mozilla/5.0' },
-    });
+    const res = await biliFetch(`https://api.bilibili.com/x/v3/fav/resource/list?media_id=${seasonId}&pn=${pn}&ps=${PLAYLIST_PAGE_SIZE}`);
     const data = await res.json();
     if (data.code !== 0) throw new Error(data.message);
     const medias = data.data?.list || data.data?.medias || [];
@@ -67,9 +87,7 @@ export async function getPlaylistVideos(_mid: string, seasonId: string) {
 }
 
 export async function getAudioUrl(bvid: string, cid: number) {
-  const res = await fetch(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=0&fnval=16&fnver=0&fourk=1`, {
-    headers: { Referer: 'https://www.bilibili.com/', 'User-Agent': 'Mozilla/5.0' },
-  });
+  const res = await biliFetch(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=0&fnval=16&fnver=0&fourk=1`);
   const data = await res.json();
   if (data.code !== 0) throw new Error(data.message);
   const audioTrack = data.data.dash?.audio?.[0];
