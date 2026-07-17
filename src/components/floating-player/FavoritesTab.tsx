@@ -106,7 +106,7 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
               {expandedId === fav.id && (
                 <div className={favStyles['ep-fav-tracks']}>
                   <div className={favStyles['ep-fav-input-row']} onClick={(e) => e.stopPropagation()}>
-                      <input type="text" placeholder="BV 号或收藏夹链接" value={addingToFavId === fav.id ? inputValue : ''}
+                      <input type="text" placeholder="BV号 / 收藏夹ID / 合集链接" value={addingToFavId === fav.id ? inputValue : ''}
                         onChange={(e) => { setAddingToFavId(fav.id); setInputValue(e.target.value); }}
                         onKeyDown={async (e) => {
                           const val = inputValue.trim();

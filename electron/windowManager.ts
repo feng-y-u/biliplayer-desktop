@@ -55,13 +55,11 @@ export function createWindow() {
     },
   );
 
+  // 全屏窗口（如浏览器视频全屏）的层级高于默认 floating，使用 pop-up-menu 层级
+  mainWindow.setAlwaysOnTop(true, 'pop-up-menu');
+
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
-  });
-
-  // 透明无边框窗口在 Windows 上被点击获得焦点后可能被窗口管理器降级
-  mainWindow.on('focus', () => {
-    mainWindow.setAlwaysOnTop(true, 'floating');
   });
 
   mainWindow.webContents.on('render-process-gone', (_event, details) => {

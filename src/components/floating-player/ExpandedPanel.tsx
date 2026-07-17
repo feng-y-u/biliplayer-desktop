@@ -147,7 +147,7 @@ export default function ExpandedPanel({
       </div>
 
       <div className={panelStyles['ep-input-row']} data-no-drag>
-        <input type="text" placeholder="BV 号或收藏夹链接" value={inputValue}
+        <input type="text" placeholder="BV号 / 收藏夹ID / 合集链接" value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
         />

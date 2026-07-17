@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import type { Track, FavoriteFolder } from '@/types';
-import { getVideoInfo, getPlaylist } from '@/services/api';
+import { getVideoInfo, getPlaylist, getFavList, getSeriesList, getColleList } from '@/services/api';
 import { isSameTrack } from '@/utils/track';
 import { parseInput } from '@/utils/bilibili';
 
@@ -54,19 +54,33 @@ export function useFavoriteActions({
   const handleAddToFavoriteFromInput = useCallback(async (favId: string, input: string) => {
     try {
       const parsed = parseInput(input);
-      if (!parsed) throw new Error('无效的BV号或链接');
-      if (parsed.type === 'playlist') {
-        const res = await getPlaylist(parsed.url);
-        if (!res.success) throw new Error(res.error);
-        const tracks = res.data;
-        const added = favorites.addTracksToFavorite(favId, tracks);
-        showNotification(added > 0 ? `已添加 ${added} 首歌曲到收藏夹` : '歌曲已在收藏夹中');
-      } else {
+      if (!parsed) throw new Error('无效的BV号、收藏夹ID或链接');
+      let tracks: Track[];
+
+      if (parsed.type === 'bvid') {
         const res = await getVideoInfo(parsed.bvid);
         if (!res.success) throw new Error(res.error);
-        const track = res.data;
-        favorites.addTrackToFavorite(favId, track);
+        tracks = [res.data];
+      } else if (parsed.type === 'favId') {
+        const res = await getFavList(parsed.id);
+        if (!res.success) throw new Error(res.error);
+        tracks = res.data;
+      } else if (parsed.type === 'series') {
+        const res = await getSeriesList(parsed.mid, parsed.sid);
+        if (!res.success) throw new Error(res.error);
+        tracks = res.data;
+      } else if (parsed.type === 'collection') {
+        const res = await getColleList(parsed.mid, parsed.sid);
+        if (!res.success) throw new Error(res.error);
+        tracks = res.data;
+      } else {
+        const res = await getPlaylist(parsed.url);
+        if (!res.success) throw new Error(res.error);
+        tracks = res.data;
       }
+
+      const added = favorites.addTracksToFavorite(favId, tracks);
+      showNotification(added > 0 ? `已添加 ${added} 首歌曲到收藏夹` : '歌曲已在收藏夹中');
     } catch (e) {
       const msg = e instanceof Error ? e.message : '添加失败';
       showNotification(`添加失败：${msg}`);

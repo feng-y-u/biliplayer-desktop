@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Track, CurrentAudio, PlayMode } from '@/types';
-import { pauseAudioLocal, resumeAudioLocal, getVideoInfo, getPlaylist } from '@/services/api';
+import { getVideoInfo, getPlaylist, getFavList, getSeriesList, getColleList } from '@/services/api';
+import { getAudioEngine } from '@/services/audioEngine';
 import { parseInput } from '@/utils/bilibili';
 
 interface PlaylistStore {
@@ -40,15 +41,23 @@ export function usePlayerController({
   showNotification,
 }: UsePlayerControllerOpts) {
   const [loading, setLoading] = useState(false);
+  const nextInFlightRef = useRef(false);
 
   const handlePlayPause = useCallback(() => {
-    if (!currentAudio && playlist.tracks[playlist.currentIndex]) {
-      const track = playlist.tracks[playlist.currentIndex]!;
-      playTrack(track);
-    } else if (isPlaying) {
+    if (isPlaying) {
       playPause();
+      return;
+    }
+    const track: Track | undefined =
+      playlist.tracks[playlist.currentIndex] ?? (currentAudio ? { ...currentAudio } : undefined);
+    if (!track) return;
+    const engine = getAudioEngine();
+    if (engine.canResume(track.bvid, track.cid)) {
+      void engine.resume().then((ok) => {
+        if (!ok) void playTrack(track);
+      });
     } else {
-      resumeAudioLocal();
+      void playTrack(track);
     }
   }, [currentAudio, playlist.tracks, playlist.currentIndex, isPlaying, playTrack, playPause]);
 
@@ -62,13 +71,20 @@ export function usePlayerController({
 
   const handlePlayTrack = useCallback(async (index: number) => {
     if (index < 0 || index >= playlist.tracks.length) return;
-    const track = playlist.tracks[index]!;
-    playlist.setCurrentIndex(index);
-    const ok = await playTrack(track);
-    if (ok) {
-      recent.addRecentTrack(track);
-    } else {
-      showNotification('播放失败，请稍后重试');
+    // 与下一首共用防重入，避免加载中点列表再触发并发 play
+    if (nextInFlightRef.current) return;
+    nextInFlightRef.current = true;
+    try {
+      const track = playlist.tracks[index]!;
+      playlist.setCurrentIndex(index);
+      const ok = await playTrack(track);
+      if (ok) {
+        recent.addRecentTrack(track);
+      } else {
+        showNotification('播放失败，请稍后重试');
+      }
+    } finally {
+      nextInFlightRef.current = false;
     }
   }, [playlist, playTrack, recent, showNotification]);
 
@@ -76,11 +92,11 @@ export function usePlayerController({
     const track = playlist.tracks[index];
     if (!track) return;
 
+    const engine = getAudioEngine();
     const wasPlaying = index === playlist.currentIndex && isPlaying;
     const isLastTrack = playlist.tracks.length <= 1;
     const remaining = playlist.tracks.length - 1;
 
-    // 在删除前算好下一首要播的曲目（删除后 zustand 闭包里的 tracks 还是旧的）
     let nextTrack: Track | undefined;
     if (wasPlaying && !isLastTrack) {
       const nextIndex = index < remaining ? index : index - 1;
@@ -90,7 +106,7 @@ export function usePlayerController({
     playlist.deleteTrack(index);
 
     if (wasPlaying && isLastTrack) {
-      pauseAudioLocal();
+      engine.pause();
     } else if (nextTrack) {
       playTrack(nextTrack);
     }
@@ -99,7 +115,7 @@ export function usePlayerController({
   const handleClearPlaylist = useCallback(() => {
     playlist.setTracks([]);
     playlist.setCurrentIndex(0);
-    pauseAudioLocal();
+    getAudioEngine().pause();
     showNotification('播放列表已清空');
   }, [playlist, showNotification]);
 
@@ -110,21 +126,37 @@ export function usePlayerController({
   const handleInputSubmit = useCallback(async (input: string) => {
     try {
       const parsed = parseInput(input);
-      if (!parsed) throw new Error('请输入 B站视频 BV 号、分享链接，或收藏夹链接');
+      if (!parsed) throw new Error('请输入 B站视频 BV 号、分享链接、收藏夹链接、收藏夹ID 或合集链接');
       setLoading(true);
       try {
-        if (parsed.type === 'playlist') {
-          const res = await getPlaylist(parsed.url);
-          if (!res.success) throw new Error(res.error);
-          const tracks = res.data;
-          const existing = new Set(playlist.tracks.map(t => t.bvid));
-          const newTracks = tracks.filter(t => !existing.has(t.bvid));
-          playlist.setTracks([...playlist.tracks, ...newTracks]);
-        } else {
+        if (parsed.type === 'bvid') {
           const res = await getVideoInfo(parsed.bvid);
           if (!res.success) throw new Error(res.error);
-          const track = res.data;
-          playlist.addTrack(track);
+          playlist.addTrack(res.data);
+        } else if (parsed.type === 'favId') {
+          const res = await getFavList(parsed.id);
+          if (!res.success) throw new Error(res.error);
+          const existing = new Set(playlist.tracks.map(t => `${t.bvid}:${t.cid}`));
+          const newTracks = res.data.filter(t => !existing.has(`${t.bvid}:${t.cid}`));
+          playlist.setTracks([...playlist.tracks, ...newTracks]);
+        } else if (parsed.type === 'series') {
+          const res = await getSeriesList(parsed.mid, parsed.sid);
+          if (!res.success) throw new Error(res.error);
+          const existing = new Set(playlist.tracks.map(t => `${t.bvid}:${t.cid}`));
+          const newTracks = res.data.filter(t => !existing.has(`${t.bvid}:${t.cid}`));
+          playlist.setTracks([...playlist.tracks, ...newTracks]);
+        } else if (parsed.type === 'collection') {
+          const res = await getColleList(parsed.mid, parsed.sid);
+          if (!res.success) throw new Error(res.error);
+          const existing = new Set(playlist.tracks.map(t => `${t.bvid}:${t.cid}`));
+          const newTracks = res.data.filter(t => !existing.has(`${t.bvid}:${t.cid}`));
+          playlist.setTracks([...playlist.tracks, ...newTracks]);
+        } else {
+          const res = await getPlaylist(parsed.url);
+          if (!res.success) throw new Error(res.error);
+          const existing = new Set(playlist.tracks.map(t => t.bvid));
+          const newTracks = res.data.filter(t => !existing.has(t.bvid));
+          playlist.setTracks([...playlist.tracks, ...newTracks]);
         }
       } finally {
         setLoading(false);
@@ -138,32 +170,43 @@ export function usePlayerController({
 
   const handleNextButton = useCallback(async () => {
     if (playlist.tracks.length === 0) return;
-    const total = playlist.tracks.length;
-    // 最多尝试所有曲目一次，避免无限循环
-    for (let attempt = 0; attempt < total; attempt++) {
-      let nextIndex: number;
-      if (playlist.playMode === 'single') {
-        nextIndex = playlist.currentIndex;
-      } else if (playlist.playMode === 'shuffle') {
-        if (total === 1) {
-          nextIndex = 0;
+    // 防重入：error 与 play 失败曾同时触发 next，导致并发抢 audioEl、整表失败
+    if (nextInFlightRef.current) return;
+    nextInFlightRef.current = true;
+    try {
+      const total = playlist.tracks.length;
+      const startIndex = playlist.currentIndex;
+      // 最多尝试所有曲目一次，避免无限循环
+      for (let attempt = 0; attempt < total; attempt++) {
+        let nextIndex: number;
+        if (playlist.playMode === 'single') {
+          nextIndex = startIndex;
+        } else if (playlist.playMode === 'shuffle') {
+          if (total === 1) {
+            nextIndex = 0;
+          } else {
+            do {
+              nextIndex = Math.floor(Math.random() * total);
+            } while (nextIndex === startIndex && total > 1);
+            // 后续 attempt 避开已失败的 startIndex；随机即可
+            if (attempt > 0) {
+              nextIndex = (startIndex + 1 + attempt) % total;
+            }
+          }
         } else {
-          do {
-            nextIndex = Math.floor(Math.random() * total);
-          } while (nextIndex === playlist.currentIndex);
+          nextIndex = (startIndex + 1 + attempt) % total;
         }
-      } else {
-        nextIndex = (playlist.currentIndex + 1 + attempt) % total;
-      }
-      const track = playlist.tracks[nextIndex];
-      if (!track) return;
-      const ok = await playTrack(track);
-      if (ok) {
+        const track = playlist.tracks[nextIndex];
+        if (!track) return;
+        // 先更新列表高亮，避免加载期间 UI 仍停在上一首
         playlist.setCurrentIndex(nextIndex);
-        return;
+        const ok = await playTrack(track);
+        if (ok) return;
       }
+      showNotification('所有曲目播放失败');
+    } finally {
+      nextInFlightRef.current = false;
     }
-    showNotification('所有曲目播放失败');
   }, [playlist.currentIndex, playlist.playMode, playlist.tracks, playTrack, showNotification]);
 
   const handlePrevButton = useCallback(async () => {
@@ -171,10 +214,9 @@ export function usePlayerController({
     const prevIndex = playlist.currentIndex - 1 < 0 ? playlist.tracks.length - 1 : playlist.currentIndex - 1;
     const track = playlist.tracks[prevIndex];
     if (!track) return;
+    playlist.setCurrentIndex(prevIndex);
     const ok = await playTrack(track);
-    if (ok) {
-      playlist.setCurrentIndex(prevIndex);
-    } else {
+    if (!ok) {
       showNotification('播放失败，请稍后重试');
     }
   }, [playlist.currentIndex, playlist.tracks, playTrack, showNotification]);

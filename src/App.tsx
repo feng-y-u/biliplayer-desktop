@@ -9,6 +9,7 @@ import { useFavoriteActions } from './hooks/useFavoriteActions';
 import FloatingPlayer from '@/components/floating-player/FloatingPlayer';
 import { PlayerContext } from './contexts/PlayerContext';
 import { usePlayerContextValue } from './contexts/usePlayerContextValue';
+import { getAudioEngine } from './services/audioEngine';
 
 const NOTIFICATION_TIMEOUT_MS = 3000;
 
@@ -63,7 +64,7 @@ function App() {
     if (!autoLoaded.current && playlist.tracks.length > 0 && playlist.tracks[playlist.currentIndex]) {
       autoLoaded.current = true;
       const track = playlist.tracks[playlist.currentIndex]!;
-      import('./services/api').then(api => api.loadAudioTrack(track.bvid, track.cid));
+      void getAudioEngine().preload(track.bvid, track.cid);
     }
   }, [playlist.tracks, playlist.currentIndex]);
 

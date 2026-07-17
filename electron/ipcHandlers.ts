@@ -1,7 +1,7 @@
 // electron/ipcHandlers.ts
 import { ipcMain } from 'electron';
 import { appCore } from './appCore';
-import { getVideoInfo, parsePlaylistUrl, getPlaylistVideos, getAudioUrl } from './bilibiliApi';
+import { getVideoInfo, parsePlaylistUrl, getPlaylistVideos, getFavListVideos, getSeriesVideos, getColleVideos, getAudioUrl } from './bilibiliApi';
 
 const DEFAULT_WINDOW_SIZE = { width: 320, height: 480 };
 
@@ -16,6 +16,12 @@ export function registerIpcHandlers() {
           if (!parsed) throw new Error('Invalid playlist URL');
           return { success: true, data: await getPlaylistVideos(parsed.mid, parsed.seasonId) };
         }
+        case 'GET_FAV_LIST':
+          return { success: true, data: await getFavListVideos(message.mediaId) };
+        case 'GET_SERIES_LIST':
+          return { success: true, data: await getSeriesVideos(message.mid, message.sid) };
+        case 'GET_COLLE_LIST':
+          return { success: true, data: await getColleVideos(message.mid, message.sid) };
         case 'GET_AUDIO_URL':
           return { success: true, data: await getAudioUrl(message.bvid, message.cid) };
         default:

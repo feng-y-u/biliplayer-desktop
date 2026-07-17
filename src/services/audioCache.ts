@@ -36,6 +36,14 @@ export class AudioCache {
     this.bvid = bvid;
     this.cid = cid;
   }
+
+  /** 清空缓存（加载失败 / 强制刷新时避免反复命中死链）。 */
+  invalidate(): void {
+    this.url = '';
+    this.expiresAt = 0;
+    this.bvid = '';
+    this.cid = 0;
+  }
 }
 
 export const audioCache = new AudioCache();

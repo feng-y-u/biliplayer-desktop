@@ -9,5 +9,6 @@ export interface VideoInfo {
 
 export interface AudioUrl {
   url: string;
+  backupUrls?: string[];
   expiresAt: number;
 }
