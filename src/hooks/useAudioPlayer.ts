@@ -29,17 +29,37 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
   const isPlayingRef = useRef(state.isPlaying);
   isPlayingRef.current = state.isPlaying;
 
+  // 后备：有些 B站音频流不会触发 ended，通过 timeupdate 检测播放到底
+  const nearEndRef = useRef(false);
+
   // Attach event listeners to audio element once it exists
   useEffect(() => {
     const cleanup: (() => void)[] = [];
 
     function attach(el: HTMLAudioElement) {
-      const onTimeUpdate = () => setState(prev => ({ ...prev, currentTime: el.currentTime }));
+      const onTimeUpdate = () => {
+        setState(prev => ({ ...prev, currentTime: el.currentTime }));
+        // 后备逻辑：距末尾 1 秒内触发切歌
+        if (el.duration > 0 && el.currentTime >= el.duration - 1) {
+          if (!nearEndRef.current) {
+            nearEndRef.current = true;
+            onTrackEndRef.current?.();
+          }
+        } else {
+          nearEndRef.current = false;
+        }
+      };
       const onPlay = () => setState(prev => ({ ...prev, isPlaying: true }));
       const onPause = () => setState(prev => ({ ...prev, isPlaying: false }));
-      const onMeta = () => setState(prev => ({ ...prev, duration: el.duration }));
+      const onMeta = () => {
+        nearEndRef.current = false;
+        setState(prev => ({ ...prev, duration: el.duration }));
+      };
       const onVolume = () => setState(prev => ({ ...prev, volume: el.volume }));
-      const onEnded = () => onTrackEndRef.current?.();
+      const onEnded = () => {
+        nearEndRef.current = true;
+        onTrackEndRef.current?.();
+      };
       const onError = () => {
         if (el.error && el.error.code !== MediaError.MEDIA_ERR_ABORTED) {
           console.error('[useAudioPlayer] 音频错误:', {

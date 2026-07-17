@@ -138,28 +138,32 @@ export function usePlayerController({
 
   const handleNextButton = useCallback(async () => {
     if (playlist.tracks.length === 0) return;
-    let nextIndex: number;
-    if (playlist.playMode === 'single') {
-      nextIndex = playlist.currentIndex;
-    } else if (playlist.playMode === 'shuffle') {
-      if (playlist.tracks.length === 1) {
-        nextIndex = 0;
+    const total = playlist.tracks.length;
+    // 最多尝试所有曲目一次，避免无限循环
+    for (let attempt = 0; attempt < total; attempt++) {
+      let nextIndex: number;
+      if (playlist.playMode === 'single') {
+        nextIndex = playlist.currentIndex;
+      } else if (playlist.playMode === 'shuffle') {
+        if (total === 1) {
+          nextIndex = 0;
+        } else {
+          do {
+            nextIndex = Math.floor(Math.random() * total);
+          } while (nextIndex === playlist.currentIndex);
+        }
       } else {
-        do {
-          nextIndex = Math.floor(Math.random() * playlist.tracks.length);
-        } while (nextIndex === playlist.currentIndex);
+        nextIndex = (playlist.currentIndex + 1 + attempt) % total;
       }
-    } else {
-      nextIndex = (playlist.currentIndex + 1) % playlist.tracks.length;
+      const track = playlist.tracks[nextIndex];
+      if (!track) return;
+      const ok = await playTrack(track);
+      if (ok) {
+        playlist.setCurrentIndex(nextIndex);
+        return;
+      }
     }
-    const track = playlist.tracks[nextIndex];
-    if (!track) return;
-    const ok = await playTrack(track);
-    if (ok) {
-      playlist.setCurrentIndex(nextIndex);
-    } else {
-      showNotification('播放失败，请稍后重试');
-    }
+    showNotification('所有曲目播放失败');
   }, [playlist.currentIndex, playlist.playMode, playlist.tracks, playTrack, showNotification]);
 
   const handlePrevButton = useCallback(async () => {

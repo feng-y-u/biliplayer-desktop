@@ -60,7 +60,10 @@ export async function loadAudioTrack(bvid: string, cid: number): Promise<{ url: 
       return { url: cached.url, expiresAt: cached.expiresAt };
     }
     const res = await getAudioUrl(bvid, cid);
-    if (!res.success) return null;
+    if (!res.success) {
+      console.error('[api] loadAudioTrack 失败:', res.error);
+      return null;
+    }
     audioCache.save(res.data.url, res.data.expiresAt, bvid, cid);
     return { url: res.data.url, expiresAt: res.data.expiresAt };
   } catch (e) {
