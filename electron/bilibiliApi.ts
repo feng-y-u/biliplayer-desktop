@@ -6,12 +6,14 @@ const FETCH_TIMEOUT_MS = 15_000;
 const FETCH_RETRIES = 2;
 const FETCH_RETRY_DELAY_MS = 1000;
 
+import { net } from 'electron';
+
 async function biliFetch(url: string, retries = FETCH_RETRIES): Promise<Response> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-      const res = await fetch(url, {
+      const res = await net.fetch(url, {
         signal: controller.signal,
         headers: { Referer: 'https://www.bilibili.com/', 'User-Agent': 'Mozilla/5.0' },
       });

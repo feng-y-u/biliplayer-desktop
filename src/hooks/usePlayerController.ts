@@ -110,7 +110,7 @@ export function usePlayerController({
   const handleInputSubmit = useCallback(async (input: string) => {
     try {
       const parsed = parseInput(input);
-      if (!parsed) throw new Error('无效的BV号或链接');
+      if (!parsed) throw new Error('请输入 B站视频 BV 号、分享链接，或收藏夹链接');
       setLoading(true);
       try {
         if (parsed.type === 'playlist') {
