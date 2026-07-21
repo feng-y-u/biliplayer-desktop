@@ -15,6 +15,7 @@ interface ExpandedPanelProps {
   currentAudio?: CurrentAudio | null;
   currentTime: number;
   duration: number;
+  buffered: number;
   isPlaying: boolean;
   volume: number;
   tracks: Track[];
@@ -29,6 +30,7 @@ export default function ExpandedPanel({
   currentAudio,
   currentTime,
   duration,
+  buffered,
   isPlaying,
   tracks,
   currentIndex,
@@ -51,6 +53,7 @@ export default function ExpandedPanel({
 
   const rawProg = calcProgress(currentTime, duration);
   const progValue = seekingValue ?? rawProg;
+  const bufPct = duration > 0 ? Math.min(100, (buffered / duration) * 100) : 0;
 
   const handleSubmit = useCallback(() => {
     const trimmed = inputValue.trim();
@@ -133,6 +136,7 @@ export default function ExpandedPanel({
 
       <div className="ep-progress" data-no-drag>
         <div className="ep-prog-bar">
+          <div className="ep-prog-buf" style={{ width: `${bufPct}%` }} />
           <div className="ep-prog-fill" style={{ width: `${progValue}%` }} />
           <input type="range" min={0} max={100} step={0.1} value={progValue}
             onChange={(e) => { const v = parseFloat(e.target.value); setSeekingValue(v); if (duration) ctx.onSeek((v / 100) * duration); }}

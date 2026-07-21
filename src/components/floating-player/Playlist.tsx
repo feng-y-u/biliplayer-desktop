@@ -27,7 +27,7 @@ export default function Playlist({
   const ctx = usePlayerContext();
   const [dropdownTrackIdx, setDropdownTrackIdx] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { handleDragStart, handleDragOver, handleDragLeave, handleDrop, handleDragEnd } = useDragReorder({
+  const { handleDragStart, handleDragOver, handleDragLeave, handleDrop, handleDragEnd, dragIndex, overIndex } = useDragReorder({
     onReorder: (from, to) => ctx.onReorderTracks(from, to),
   });
 
@@ -45,12 +45,10 @@ export default function Playlist({
 
   if (tracks.length === 0) {
     return (
-      <div className="playlist" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <div className="ep-empty" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '28px', marginBottom: '8px', color: 'var(--fg-2)' }}>♪</div>
-          <div style={{ color: 'var(--fg-2)' }}>播放列表为空</div>
-          <div style={{ fontSize: '11px', marginTop: '4px', color: 'var(--fg-3)' }}>在上方输入 BV 号或收藏夹链接添加歌曲</div>
-        </div>
+      <div className="playlist playlist-empty">
+        <div className="pl-empty-icon">♪</div>
+        <div className="pl-empty-title">播放列表为空</div>
+        <div className="pl-empty-desc">在上方输入 BV 号或收藏夹链接添加歌曲</div>
       </div>
     );
   }
@@ -62,7 +60,7 @@ export default function Playlist({
         return (
           <div
             key={`${track.bvid}-${track.cid}`}
-            className={`playlist-item${isActive ? ' active' : ''}`}
+            className={`playlist-item${isActive ? ' active' : ''}${dragIndex === index ? ' dragging' : ''}${overIndex === index ? (dragIndex !== null && dragIndex < index ? ' drag-over-below' : ' drag-over-above') : ''}`}
             data-no-drag
             draggable
             onDragStart={() => handleDragStart(index)}
@@ -102,7 +100,7 @@ export default function Playlist({
                   className="pl-fav-dropdown-toggle"
                   onClick={(e) => { e.stopPropagation(); setDropdownTrackIdx(prev => prev === index ? null : index); }}
                   title="添加到收藏夹"
-                >▼</button>
+                ><svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M3 4.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
                 {dropdownTrackIdx === index && (
                   <div className="pl-fav-dropdown" ref={dropdownRef}>
                     {favorites.map(f => (

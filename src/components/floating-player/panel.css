@@ -27,7 +27,7 @@
 .ep-top-btn {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   border: none;
   background: var(--surface-hover);
   color: var(--fg-2);
@@ -77,14 +77,14 @@
 .ep-np-cover {
   width: 130px;
   height: 130px;
-  border-radius: 12px;
+  border-radius: var(--radius-12);
   overflow: hidden;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #6366f1, #4f6ef7);
+  background: var(--gradient);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--on-accent);
   font-size: 40px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
@@ -136,8 +136,8 @@
   width: 14px;
   height: 14px;
   border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: white;
-  border-radius: 50%;
+  border-top-color: var(--on-accent);
+  border-radius: var(--radius-full);
   animation: spin 0.6s linear infinite;
   vertical-align: middle;
   margin-right: 4px;

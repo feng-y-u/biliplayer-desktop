@@ -10,7 +10,7 @@
 .ep-vol-btn {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   border: none;
   background: none;
   color: var(--fg-2);
@@ -42,7 +42,7 @@
     var(--accent) var(--vol-pct, 100%),
     var(--border) var(--vol-pct, 100%)
   );
-  border-radius: 2px;
+  border-radius: var(--radius-2);
   cursor: pointer;
   flex-shrink: 0;
   outline: none;
@@ -51,10 +51,10 @@
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--accent);
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  border: 2px solid var(--on-accent);
+  box-shadow: var(--shadow-xs);
   cursor: pointer;
   transition: transform 0.12s;
 }
@@ -64,10 +64,10 @@
 .ep-vol-slider::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--accent);
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  border: 2px solid var(--on-accent);
+  box-shadow: var(--shadow-xs);
   cursor: pointer;
   transition: transform 0.12s;
 }
@@ -76,11 +76,11 @@
 }
 .ep-vol-slider::-moz-range-progress {
   background: var(--accent);
-  border-radius: 2px;
+  border-radius: var(--radius-2);
 }
 .ep-vol-slider::-moz-range-track {
   background: var(--border);
-  border-radius: 2px;
+  border-radius: var(--radius-2);
   height: 4px;
 }
 
@@ -95,7 +95,7 @@
 .ep-mode-btn {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   border: none;
   background: none;
   color: var(--fg-2);
@@ -121,7 +121,7 @@
 .ep-ctrl-btn {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   border: none;
   background: none;
   color: var(--fg-2);
@@ -147,8 +147,8 @@
   width: 40px;
   height: 40px;
   background: var(--accent);
-  color: white;
-  border-radius: 50%;
+  color: var(--on-accent);
+  border-radius: var(--radius-full);
   border: none;
   cursor: pointer;
   display: flex;
@@ -159,7 +159,7 @@
 .ep-play-btn:hover {
   background: var(--accent-hover);
   transform: scale(1.06);
-  box-shadow: 0 2px 8px rgba(79,110,247,0.35);
+  box-shadow: var(--shadow-accent);
 }
 .ep-play-btn:active {
   background: var(--accent-hover);
@@ -179,13 +179,26 @@
   width: 100%;
   height: 3px;
   background: var(--border);
-  border-radius: 2px;
+  border-radius: var(--radius-2);
   position: relative;
 }
+.ep-prog-buf {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: rgba(79,110,247,0.18);
+  border-radius: var(--radius-2);
+  pointer-events: none;
+}
 .ep-prog-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
   height: 100%;
   background: var(--accent);
-  border-radius: 2px;
+  border-radius: var(--radius-2);
+  pointer-events: none;
 }
 .ep-prog-bar input[type="range"] {
   position: absolute;
@@ -203,10 +216,10 @@
   -webkit-appearance: none;
   width: 14px;
   height: 14px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--accent);
-  border: 2px solid white;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  border: 2px solid var(--on-accent);
+  box-shadow: var(--shadow-xs);
   cursor: pointer;
   transition: transform 0.12s;
 }
@@ -216,10 +229,10 @@
 .ep-prog-bar input[type="range"]::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--accent);
-  border: 2px solid white;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  border: 2px solid var(--on-accent);
+  box-shadow: var(--shadow-xs);
   cursor: pointer;
   transition: transform 0.12s;
 }
@@ -228,10 +241,7 @@
 }
 .ep-prog-bar input[type="range"]::-moz-range-progress {
   background: var(--accent);
-  border-radius: 2px;
-}
-.ep-prog-bar input[type="range"]::-moz-range-track {
-  background: transparent;
+  border-radius: var(--radius-2);
 }
 .ep-times {
   display: flex;

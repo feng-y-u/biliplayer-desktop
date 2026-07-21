@@ -13,6 +13,7 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
   const [status, setStatus] = useState<AudioStatus>(engineRef.current.status);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [buffered, setBuffered] = useState(0);
   const [volume, setVolume] = useState(engineRef.current.volume);
   const [currentAudio, setCurrentAudio] = useState<CurrentAudio | null>(null);
 
@@ -24,7 +25,12 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
     const unsub = engine.subscribe((s) => setStatus(s));
 
     const el = engine.getMediaElement();
-    const onTime = () => setCurrentTime(el.currentTime);
+    const onTime = () => {
+      setCurrentTime(el.currentTime);
+      if (el.buffered.length > 0) {
+        setBuffered(el.buffered.end(el.buffered.length - 1));
+      }
+    };
     const onMeta = () => setDuration(Number.isFinite(el.duration) ? el.duration : 0);
     const onVol = () => setVolume(el.volume);
 
@@ -62,9 +68,10 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
     isPlaying: status === 'playing',
     currentTime,
     duration,
+    buffered,
     volume,
     currentAudio,
-  }), [status, currentTime, duration, volume, currentAudio]);
+  }), [status, currentTime, duration, buffered, volume, currentAudio]);
 
   /* ----- 操作 ----- */
 

@@ -37,7 +37,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: var(--fg);
-  color: white;
+  color: var(--on-accent);
   font-size: 11px;
   padding: 6px 14px;
   border-radius: 20px;

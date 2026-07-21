@@ -1,10 +1,10 @@
 .player-thumb {
   width: 56px;
   height: 56px;
-  border-radius: 12px;
+  border-radius: var(--radius-12);
   overflow: hidden;
   cursor: grab;
-  background: linear-gradient(135deg, #6366f1, #4f6ef7);
+  background: var(--gradient);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,7 +24,7 @@
   background-position: center;
 }
 .player-thumb .note-icon {
-  color: white;
+  color: var(--on-accent);
   font-size: 22px;
 }
 
@@ -39,7 +39,7 @@
   background: var(--surface);
   border-radius: 28px;
   padding: 4px 8px 4px 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-sm);
   margin-right: 8px;
   opacity: 0;
   pointer-events: none;
@@ -53,7 +53,7 @@
 .hover-bar button {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   border: none;
   background: none;
   color: var(--fg-2);

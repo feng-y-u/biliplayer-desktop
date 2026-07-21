@@ -20,7 +20,7 @@
 }
 .ep-fav-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 2px 8px rgba(79, 110, 247, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 .ep-fav-card-expand.expanded {
   grid-column: 1 / -1;
@@ -41,8 +41,8 @@
   justify-content: center;
   font-size: 22px;
   overflow: hidden;
-  color: white;
-  background: linear-gradient(135deg, #6366f1, #4f6ef7);
+  color: var(--on-accent);
+  background: var(--gradient);
 }
 .ep-fav-header-info {
   display: flex;
@@ -88,7 +88,7 @@
   top: 4px;
   width: 20px;
   height: 20px;
-  border-radius: 5px;
+  border-radius: var(--radius-4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,7 +99,7 @@
   opacity: 0;
   transition: opacity 0.1s, color 0.1s;
   z-index: 1;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-xs);
 }
 .ep-fav-card:hover .ep-fav-card-del,
 .ep-fav-card:hover .ep-fav-card-add {
@@ -110,7 +110,7 @@
   color: var(--muted);
 }
 .ep-fav-card-del:hover {
-  color: #e74c3c;
+  color: var(--danger);
 }
 .ep-fav-card-add {
   right: 28px;
@@ -127,6 +127,7 @@
   background: var(--bg);
   max-height: 280px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   animation: favSlideDown 0.15s ease;
 }
 @keyframes favSlideDown {
@@ -135,7 +136,7 @@
 }
 .ep-fav-tracks::-webkit-scrollbar { width: 4px; }
 .ep-fav-tracks::-webkit-scrollbar-track { background: transparent; }
-.ep-fav-tracks::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.ep-fav-tracks::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-2); }
 
 .ep-fav-track {
   display: flex;
@@ -170,7 +171,7 @@
 .ep-fav-track-del {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: var(--radius-6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -187,8 +188,8 @@
   opacity: 1;
 }
 .ep-fav-track-del:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #e74c3c;
+  background: rgba(231,76,60,0.1);
+  color: var(--danger);
 }
 
 .ep-fav-new {
@@ -211,7 +212,7 @@
 .ep-fav-new-icon {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--radius-8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -249,7 +250,7 @@
   height: 30px;
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-8);
   font-size: 12px;
   background: var(--surface);
   color: var(--fg);
@@ -266,13 +267,13 @@
 .ep-fav-create-btn {
   padding: 5px 14px;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--radius-8);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.1s;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
 }
 .ep-fav-create-btn:hover {
   background: var(--accent-hover);
@@ -296,7 +297,7 @@
   height: 28px;
   padding: 0 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-6);
   font-size: 11px;
   background: var(--surface);
   color: var(--fg);
@@ -309,9 +310,9 @@
   height: 28px;
   padding: 0 10px;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-6);
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
@@ -342,12 +343,12 @@
 .ep-fav-empty-btn {
   padding: 7px 18px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-8);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   transition: background 0.1s;
 }
 .ep-fav-empty-btn:hover {

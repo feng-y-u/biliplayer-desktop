@@ -1,15 +1,40 @@
 :root {
+  /* 背景 */
   --bg: #f8f9fc;
   --surface: #ffffff;
   --surface-hover: #f1f3f7;
+
+  /* 前景文字（3 级） */
   --fg: #1a1d26;
   --fg-2: #5a5f72;
   --muted: #9ba1b2;
+
+  /* 主题色 */
   --accent: #4f6ef7;
   --accent-hover: #3d5ce5;
+  --danger: #e74c3c;
+
+  /* 边框 */
   --border: #e4e7ee;
-  --radius: 16px;
+
+  /* 圆角 */
+  --radius-2: 2px;
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
   --radius-sm: 10px;
-  --shadow: 0 8px 32px rgba(0,0,0,0.08);
+  --radius-12: 12px;
+  --radius: 16px;
+  --radius-full: 50%;
+
+  /* 阴影 */
+  --shadow-xs: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow: 0 4px 16px rgba(0,0,0,0.08);
   --shadow-lg: 0 16px 48px rgba(0,0,0,0.12);
+  --shadow-accent: 0 2px 8px rgba(79,110,247,0.30);
+
+  /* 杂项 */
+  --gradient: linear-gradient(135deg, #6366f1, var(--accent));
+  --on-accent: #ffffff;
 }

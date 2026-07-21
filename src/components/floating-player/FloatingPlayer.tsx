@@ -165,6 +165,7 @@ export default function FloatingPlayer({
             currentAudio={playerState.currentAudio}
             currentTime={playerState.currentTime}
             duration={playerState.duration}
+            buffered={playerState.buffered}
             isPlaying={playerState.isPlaying}
             volume={playerState.volume}
             tracks={playlistState.tracks}

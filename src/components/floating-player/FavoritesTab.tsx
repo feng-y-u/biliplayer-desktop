@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { FavoriteFolder } from '@/types';
 import { useDragReorder } from '@/hooks/useDragReorder';
 import { usePlayerContext } from '@/contexts/PlayerContext';
@@ -24,6 +24,7 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
   const [showCreateInput, setShowCreateInput] = useState(false);
   const [createName, setCreateName] = useState('');
   const [loadingFavId, setLoadingFavId] = useState<string | null>(null);
+  const createInputRef = useRef<HTMLInputElement>(null);
 
   // Clean up expandedId if the expanded folder no longer exists
   useEffect(() => {
@@ -31,6 +32,13 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
       setExpandedId(null);
     }
   }, [favorites, expandedId]);
+
+  // 每次 showCreateInput 变为 true 时可靠聚焦输入框
+  useEffect(() => {
+    if (showCreateInput && createInputRef.current) {
+      createInputRef.current.focus();
+    }
+  }, [showCreateInput]);
 
   const toggleExpand = (id: string) => {
     setExpandedId(prev => prev === id ? null : id);
@@ -64,7 +72,7 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
                   }
                   if (e.key === 'Escape') { setShowCreateInput(false); setCreateName(''); }
                 }}
-                autoFocus
+                ref={createInputRef}
               />
               <div className={favStyles['ep-fav-create-actions']}>
                 <button className={favStyles['ep-fav-create-btn']} onClick={() => { if (createName.trim()) { ctx.onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>
@@ -165,7 +173,7 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
                   }
                   if (e.key === 'Escape') { setShowCreateInput(false); setCreateName(''); }
                 }}
-                autoFocus
+                ref={createInputRef}
               />
               <div className={favStyles['ep-fav-create-actions']}>
                 <button className={favStyles['ep-fav-create-btn']} onClick={() => { if (createName.trim()) { ctx.onCreateFavorite(createName.trim()); setCreateName(''); setShowCreateInput(false); } }}>确定</button>

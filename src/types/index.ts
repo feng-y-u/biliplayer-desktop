@@ -31,6 +31,7 @@ export interface PlayerState {      //播放器实时状态
   isPlaying: boolean;     //是否正在播放
   currentTime: number;    //当前播放时间
   duration: number;     //总时长
+  buffered: number;       //已缓冲到的秒数
   volume: number;     //音量0—1
   currentAudio: CurrentAudio | null;      //当前播放的音频信息
 }
