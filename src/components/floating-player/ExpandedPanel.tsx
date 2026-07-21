@@ -170,14 +170,17 @@ export default function ExpandedPanel({
         <button className={`${panelStyles['ep-tab']}${activeTab === 'recent' ? ` ${panelStyles.active}` : ''}`} onClick={() => setActiveTab('recent')}>
           最近
         </button>
-        {activeTab === 'playlist' && tracks.length > 0 && (
-          <button className={panelStyles['ep-tab-clear']} onClick={ctx.onClearPlaylist} title="清空播放列表">清空</button>
-        )}
       </div>
 
       <div className={panelStyles['ep-content']} data-no-drag>
         {activeTab === 'playlist' && (
-          <Playlist
+          <>
+            {tracks.length > 0 && (
+              <div className={panelStyles['ep-list-toolbar']}>
+                <button className={panelStyles['ep-list-clear']} onClick={ctx.onClearPlaylist} title="清空播放列表">清空列表</button>
+              </div>
+            )}
+            <Playlist
             tracks={tracks}
             currentIndex={currentIndex}
             isPlaying={isPlaying}
@@ -185,6 +188,7 @@ export default function ExpandedPanel({
             onPlayTrack={ctx.onPlayTrack}
             onDeleteTrack={ctx.onDeleteTrack}
           />
+          </>
         )}
 
         {activeTab === 'favs' && (

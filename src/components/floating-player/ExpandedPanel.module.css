@@ -57,42 +57,36 @@
   border: none;
   background: none;
   position: relative;
-  transition: color 0.12s;
+  transition: color 0.12s, opacity 0.12s;
+  opacity: 0.55;
 }
 .ep-tab:hover {
   color: var(--fg);
+  opacity: 0.75;
 }
 .ep-tab.active {
   color: var(--accent);
+  font-weight: 600;
+  opacity: 1;
 }
 .ep-tab.active::after {
   content: '';
   position: absolute;
   bottom: 0;
-  left: 25%;
-  right: 25%;
-  height: 2px;
+  left: 12%;
+  right: 12%;
+  height: 2.5px;
   background: var(--accent);
-  border-radius: 1px;
+  border-radius: 2px;
 }
 
-.ep-tab-clear {
+.ep-tabs-right {
   position: absolute;
   right: 16px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 10px;
-  color: var(--muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: var(--radius-4);
-  transition: color 0.12s, background 0.12s;
-}
-.ep-tab-clear:hover {
-  color: var(--danger);
-  background: rgba(231,76,60,0.08);
+  display: flex;
+  align-items: center;
 }
 
 .ep-content {
@@ -111,4 +105,24 @@
 .ep-content::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: var(--radius-2);
+}
+
+.ep-list-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 16px 0;
+}
+.ep-list-clear {
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-4);
+  transition: color 0.12s, background 0.12s;
+}
+.ep-list-clear:hover {
+  color: var(--danger);
+  background: rgba(231,76,60,0.08);
 }

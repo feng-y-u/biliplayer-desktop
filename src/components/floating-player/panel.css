@@ -29,17 +29,22 @@
   height: 28px;
   border-radius: var(--radius-full);
   border: none;
-  background: var(--surface-hover);
-  color: var(--fg-2);
+  background: rgba(0,0,0,0.12);
+  color: rgba(255,255,255,0.85);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, transform 0.1s;
+  backdrop-filter: blur(6px);
 }
 .ep-top-btn:hover {
-  background: var(--border);
-  color: var(--fg);
+  background: rgba(0,0,0,0.22);
+  color: #fff;
+}
+.ep-top-btn:active {
+  transform: scale(0.9);
+  background: rgba(0,0,0,0.3);
 }
 .ep-top-btn svg {
   width: 14px;
