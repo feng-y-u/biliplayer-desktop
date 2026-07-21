@@ -2,7 +2,7 @@
 .ep-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 8px 16px 12px;
   flex-shrink: 0;
 }
@@ -19,11 +19,14 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: color 0.12s, background 0.12s;
+  transition: color 0.12s, background 0.12s, transform 0.1s;
 }
 .ep-vol-btn:hover {
   color: var(--accent);
   background: var(--surface-hover);
+}
+.ep-vol-btn:active {
+  transform: scale(0.88);
 }
 .ep-vol-btn svg {
   width: 16px;
@@ -85,7 +88,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 12px;
   flex: 1;
 }
 
@@ -101,11 +104,14 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: color 0.12s, background 0.12s;
+  transition: color 0.12s, background 0.12s, transform 0.1s;
 }
 .ep-mode-btn:hover {
   color: var(--accent);
   background: var(--surface-hover);
+}
+.ep-mode-btn:active {
+  transform: scale(0.88);
 }
 .ep-mode-btn svg {
   width: 16px;
@@ -123,19 +129,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, transform 0.1s;
 }
 .ep-ctrl-btn:hover {
   background: var(--surface-hover);
   color: var(--fg);
+}
+.ep-ctrl-btn:active {
+  background: var(--border);
+  transform: scale(0.92);
 }
 .ep-ctrl-btn svg {
   width: 18px;
   height: 18px;
 }
 .ep-play-btn {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   background: var(--accent);
   color: white;
   border-radius: 50%;
@@ -144,11 +154,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.12s, transform 0.12s;
+  transition: background 0.12s, transform 0.1s, box-shadow 0.12s;
 }
 .ep-play-btn:hover {
   background: var(--accent-hover);
-  transform: scale(1.05);
+  transform: scale(1.06);
+  box-shadow: 0 2px 8px rgba(79,110,247,0.35);
+}
+.ep-play-btn:active {
+  background: var(--accent-hover);
+  transform: scale(0.95);
+  box-shadow: 0 1px 4px rgba(79,110,247,0.25);
 }
 .ep-play-btn svg {
   width: 20px;

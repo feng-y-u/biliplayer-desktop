@@ -16,8 +16,11 @@ async function biliFetch(url: string, retries = FETCH_RETRIES): Promise<Response
     try {
       const res = await net.fetch(url, {
         signal: controller.signal,
-        headers: { Referer: 'https://www.bilibili.com/', 'User-Agent': 'Mozilla/5.0' },
+        headers: { Accept: 'application/json', Origin: 'https://www.bilibili.com' },
       });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      }
       return res;
     } catch (e) {
       lastError = e;
@@ -155,7 +158,7 @@ function pickAudioUrls(audioTrack: { baseUrl?: string; base_url?: string; backup
 
 export async function getAudioUrl(bvid: string, cid: number) {
   if (!cid) throw new Error('Invalid cid');
-  const res = await biliFetch(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=0&fnval=16&fnver=0&fourk=1`);
+  const res = await biliFetch(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=64&fnval=16&fnver=0&fourk=1`);
   const data = await res.json();
   if (data.code !== 0) throw new Error(data.message);
   const audioTrack = data.data.dash?.audio?.[0];
