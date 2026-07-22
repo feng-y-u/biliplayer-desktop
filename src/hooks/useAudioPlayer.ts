@@ -9,6 +9,7 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
   onTrackEndRef.current = onTrackEnd;
 
   const engineRef = useRef(getAudioEngine());
+  const statusRef = useRef<AudioStatus>(engineRef.current.status);
 
   const [status, setStatus] = useState<AudioStatus>(engineRef.current.status);
   const [currentTime, setCurrentTime] = useState(0);
@@ -22,16 +23,23 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
     const engine = engineRef.current;
     engine.onEnd = () => onTrackEndRef.current?.();
 
-    const unsub = engine.subscribe((s) => setStatus(s));
+    const unsub = engine.subscribe((s) => {
+      statusRef.current = s;
+      setStatus(s);
+    });
 
     const el = engine.getMediaElement();
     const onTime = () => {
+      if (statusRef.current !== 'playing') return;
       setCurrentTime(el.currentTime);
       if (el.buffered.length > 0) {
         setBuffered(el.buffered.end(el.buffered.length - 1));
       }
     };
-    const onMeta = () => setDuration(Number.isFinite(el.duration) ? el.duration : 0);
+    const onMeta = () => {
+      if (statusRef.current !== 'playing' && statusRef.current !== 'loading') return;
+      setDuration(Number.isFinite(el.duration) ? el.duration : 0);
+    };
     const onVol = () => setVolume(el.volume);
 
     el.addEventListener('timeupdate', onTime);
@@ -86,7 +94,6 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
 
   const playTrack = useCallback(async (track: Track): Promise<boolean> => {
     const engine = engineRef.current;
-    // 先更新 UI（封面/标题），避免加载期间仍显示上一首
     const cur: CurrentAudio = {
       bvid: track.bvid,
       cid: track.cid,
@@ -97,6 +104,7 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
     setCurrentAudio(cur);
     setCurrentTime(0);
     setDuration(0);
+    setBuffered(0);
 
     const ok = await engine.play(track.bvid, track.cid);
     if (ok) {
@@ -104,6 +112,9 @@ export function useAudioPlayer(onTrackEnd?: () => void) {
       setDuration(engine.duration);
     } else {
       setCurrentAudio(null);
+      setCurrentTime(0);
+      setDuration(0);
+      setBuffered(0);
     }
     return ok;
   }, []);

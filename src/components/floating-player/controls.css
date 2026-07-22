@@ -251,11 +251,3 @@
   font-variant-numeric: tabular-nums;
   margin-top: 4px;
 }
-
-/* remove orphaned rules from old vol-track */
-.ep-vol-track,
-.ep-vol-bg,
-.ep-vol-pct,
-.ep-vol-track input[type="range"] {
-  display: none;
-}

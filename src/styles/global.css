@@ -4,7 +4,7 @@ html, body, #root {
   overflow: hidden;
   background: transparent;
   border-radius: var(--radius);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Chiron GoRound TC WS', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   color: var(--fg);
   -webkit-font-smoothing: antialiased;
 }

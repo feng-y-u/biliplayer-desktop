@@ -46,6 +46,13 @@
   transform: scale(0.9);
   background: rgba(0,0,0,0.3);
 }
+.ep-login-btn {
+  margin-right: 2px;
+}
+.ep-login-btn svg {
+  color: rgba(255,255,255,0.7);
+  transition: color 0.12s;
+}
 .ep-top-btn svg {
   width: 14px;
   height: 14px;

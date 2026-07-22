@@ -80,14 +80,7 @@
   border-radius: 2px;
 }
 
-.ep-tabs-right {
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-}
+
 
 .ep-content {
   flex: 1;

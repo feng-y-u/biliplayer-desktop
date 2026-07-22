@@ -8,6 +8,19 @@ export interface ElectronAPI {
   windowResize: (w: number, h: number) => Promise<void>;
   windowGetPosition: () => Promise<{ x: number; y: number; width: number; height: number }>;
   windowSetMinimumSize: (w: number, h: number) => Promise<void>;
+
+  /** 二维码登录 */
+  loginQrcodeStart: () => Promise<QrCodeState>;
+  loginQrcodePoll: () => Promise<QrCodeState>;
+  loginQrcodeCancel: () => Promise<void>;
+  loginCheck: () => Promise<{ loggedIn: boolean }>;
+  loginLogout: () => Promise<void>;
+}
+
+export interface QrCodeState {
+  status: 'LOADING' | 'PENDING' | 'SCANNED' | 'CONFIRMED' | 'EXPIRED' | 'ERROR';
+  message: string;
+  qrUrl?: string;
 }
 
 declare global {

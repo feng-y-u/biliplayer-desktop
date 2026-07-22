@@ -8,8 +8,9 @@ import { buildSync } from 'esbuild';
 
 export default defineConfig({
   server: {
-    port: 5173,
+    port: 25173,
     strictPort: false,
+    host: '0.0.0.0',
   },
   plugins: [
     react(),

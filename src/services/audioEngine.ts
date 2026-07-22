@@ -162,7 +162,9 @@ export class AudioEngine {
 
       throw new Error('所有音频候选均加载失败');
     } catch (e) {
-      if ((e as Error).message === 'superseded') return false;
+      const msg = (e as Error).message;
+      if (msg === 'superseded') return false;
+      console.error('[AudioEngine] play 失败:', msg, 'bvid:', bvid, 'cid:', cid);
       if (this._playSeq === seq) {
         this.transition('error');
       }
@@ -388,13 +390,17 @@ export class AudioEngine {
   private async _doFetch(bvid: string, cid: number): Promise<AudioUrlResult | null> {
     try {
       const res = await this._fetchAudioUrl(bvid, cid);
-      if (!res.success) return null;
+      if (!res.success) {
+        console.error('[AudioEngine] getAudioUrl 失败:', res.error);
+        return null;
+      }
       return {
         url: res.data.url,
         backupUrls: res.data.backupUrls ?? [],
         expiresAt: res.data.expiresAt,
       };
-    } catch {
+    } catch (e) {
+      console.error('[AudioEngine] getAudioUrl 异常:', (e as Error).message);
       return null;
     }
   }

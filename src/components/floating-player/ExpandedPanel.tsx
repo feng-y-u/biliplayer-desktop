@@ -5,6 +5,7 @@ import panelStyles from './ExpandedPanel.module.css';
 import Playlist from './Playlist';
 import FavoritesTab from './FavoritesTab';
 import RecentTab from './RecentTab';
+import LoginModal from './LoginModal';
 import { ModeIcon, modeTitle, nextMode } from './ModeIcon';
 import { PlayPauseIcon, PrevTrackIcon, NextIcon, VolumeIcon } from './Icons';
 import type { Track, PlayMode, FavoriteFolder, CurrentAudio } from '@/types';
@@ -45,11 +46,18 @@ export default function ExpandedPanel({
   const [activeTab, setActiveTab] = useState<'playlist' | 'favs' | 'recent'>('playlist');
   const [seekingValue, setSeekingValue] = useState<number | null>(null);
   const prevVolume = useRef(volume);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   // Keep prevVolume in sync with actual volume (except when muted)
   useEffect(() => {
     if (volume > 0) prevVolume.current = volume;
   }, [volume]);
+
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (api) api.loginCheck().then(r => setLoggedIn(r.loggedIn));
+  }, []);
 
   const rawProg = calcProgress(currentTime, duration);
   const progValue = seekingValue ?? rawProg;
@@ -69,6 +77,24 @@ export default function ExpandedPanel({
       <div className="ep-top-bar">
         <h3>Piliplayer</h3>
         <div className="ep-top-btns" data-no-drag>
+          <button
+            className="ep-top-btn ep-login-btn"
+            onClick={async () => {
+              if (loggedIn) {
+                await window.electronAPI.loginLogout();
+                setLoggedIn(false);
+              } else if (!showLogin) {
+                setShowLogin(true);
+              }
+            }}
+            title={loggedIn ? '退出登录' : '登录 B站（获取更高 API 频率限制）'}
+          >
+            {loggedIn ? (
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            )}
+          </button>
           <button className="ep-top-btn" onClick={onClose} title="收起">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -199,6 +225,14 @@ export default function ExpandedPanel({
           <RecentTab recentTracks={recentTracks} currentAudio={currentAudio} />
         )}
       </div>
+
+      {showLogin && (
+        <LoginModal onClose={() => {
+          setShowLogin(false);
+          const api = window.electronAPI;
+          if (api) api.loginCheck().then(r => setLoggedIn(r.loggedIn));
+        }} />
+      )}
     </div>
   );
 }
