@@ -29,6 +29,7 @@ interface UsePlayerControllerOpts {
   playTrack: (track: Track) => Promise<boolean>;
   playPause: () => void;
   showNotification: (msg: string) => void;
+  onPlayErrorNeedLogin?: () => void;
 }
 
 export function usePlayerController({
@@ -39,6 +40,7 @@ export function usePlayerController({
   playTrack,
   playPause,
   showNotification,
+  onPlayErrorNeedLogin,
 }: UsePlayerControllerOpts) {
   const [loading, setLoading] = useState(false);
   const nextInFlightRef = useRef(false);
@@ -82,11 +84,12 @@ export function usePlayerController({
         recent.addRecentTrack(track);
       } else {
         showNotification('播放失败，请稍后重试');
+        onPlayErrorNeedLogin?.();
       }
     } finally {
       nextInFlightRef.current = false;
     }
-  }, [playlist, playTrack, recent, showNotification]);
+  }, [playlist, playTrack, recent, showNotification, onPlayErrorNeedLogin]);
 
   const handleDeleteTrack = useCallback((index: number) => {
     const track = playlist.tracks[index];

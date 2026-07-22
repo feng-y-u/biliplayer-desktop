@@ -4,6 +4,7 @@ import { useFloatingPlayerDrag } from '@/hooks/useFloatingPlayerDrag';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ExpandedPanel from './ExpandedPanel';
 import PlayerThumb from './PlayerThumb';
+import LoginPrompt from './LoginPrompt';
 import { usePlayerContext } from '@/contexts/PlayerContext';
 import './FloatingPlayer.css';
 import type { PlayerState, PlaylistState, WindowSize, Track, FavoriteFolder } from '@/types';
@@ -25,12 +26,22 @@ interface FloatingPlayerProps {
   };
   playerState: PlayerState;
   playlistState: PlaylistState;
+  showLogin: boolean;
+  showLoginPrompt: boolean;
+  onShowLoginChange: (v: boolean) => void;
+  onLoginPromptDismiss: () => void;
+  onLoginPromptGoLogin: () => void;
 }
 
 export default function FloatingPlayer({
   storage,
   playerState,
   playlistState,
+  showLogin,
+  showLoginPrompt,
+  onShowLoginChange,
+  onLoginPromptDismiss,
+  onLoginPromptGoLogin,
 }: FloatingPlayerProps) {
   const ctx = usePlayerContext();
   const [expanded, setExpanded] = useState(false);
@@ -174,6 +185,8 @@ export default function FloatingPlayer({
             favorites={storage.favorites}
             recentTracks={storage.recentTracks}
             onClose={handleClose}
+            showLogin={showLogin}
+            onShowLoginChange={onShowLoginChange}
           />
           {expanded && (
             <>
@@ -183,6 +196,13 @@ export default function FloatingPlayer({
             </>
           )}
         </div>
+      )}
+
+      {showLoginPrompt && (
+        <LoginPrompt
+          onLogin={onLoginPromptGoLogin}
+          onCancel={onLoginPromptDismiss}
+        />
       )}
     </div>
   );

@@ -38,3 +38,25 @@
   --gradient: linear-gradient(135deg, #6366f1, var(--accent));
   --on-accent: #ffffff;
 }
+
+:root[data-theme="dark"] {
+  --bg: #111318;
+  --surface: #1a1d26;
+  --surface-hover: #252832;
+
+  --fg: #e8eaf0;
+  --fg-2: #9da3b4;
+  --muted: #5d6376;
+
+  --accent: #6b82ff;
+  --accent-hover: #5570f0;
+  --danger: #f25c4d;
+
+  --border: #2d3143;
+
+  --shadow-xs: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.25);
+  --shadow: 0 4px 16px rgba(0,0,0,0.3);
+  --shadow-lg: 0 16px 48px rgba(0,0,0,0.4);
+  --shadow-accent: 0 2px 8px rgba(107,130,255,0.30);
+}

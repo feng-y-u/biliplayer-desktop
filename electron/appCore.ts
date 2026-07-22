@@ -14,5 +14,6 @@ export const appCore = {
     windowPosition: { left: number; top: number };
     windowSize: { width: number; height: number };
     expandedPanelSize: { width: number; height: number };
+    theme: 'light' | 'dark';
   }>(),
 };

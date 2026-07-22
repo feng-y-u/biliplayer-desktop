@@ -10,6 +10,7 @@ interface WindowState {
   windowSize: WindowSize;
   expandedPanelSize: WindowSize | null;
   volume: number;
+  theme: 'light' | 'dark';
 }
 
 interface WindowActions {
@@ -17,6 +18,7 @@ interface WindowActions {
   setWindowSize: (size: WindowSize) => void;
   setExpandedPanelSize: (size: WindowSize) => void;
   setVolume: (volume: number) => void;
+  setTheme: (theme: 'light' | 'dark') => void;
   loadFromStore: () => Promise<void>;
 }
 
@@ -44,6 +46,7 @@ export const useWindowStore = create<WindowState & WindowActions>((set) => ({
   windowSize: DEFAULT_WINDOW_SIZE,
   expandedPanelSize: null,
   volume: 0.7,
+  theme: 'light',
 
   setWindowPosition: (windowPosition) => {
     set({ windowPosition });
@@ -65,14 +68,20 @@ export const useWindowStore = create<WindowState & WindowActions>((set) => ({
     batchPersist('volume', volume);
   },
 
+  setTheme: (theme) => {
+    set({ theme });
+    batchPersist('theme', theme);
+  },
+
   loadFromStore: async () => {
     const api = window.electronAPI;
     if (!api) return;
-    const [pos, size, expandedSize, vol] = await Promise.all([
+    const [pos, size, expandedSize, vol, theme] = await Promise.all([
       api.storeGet('windowPosition'),
       api.storeGet('windowSize'),
       api.storeGet('expandedPanelSize'),
       api.storeGet('volume'),
+      api.storeGet('theme'),
     ]);
     if (pos) set({ windowPosition: pos });
     if (size) set({ windowSize: size });
@@ -82,5 +91,6 @@ export const useWindowStore = create<WindowState & WindowActions>((set) => ({
       set({ expandedPanelSize: DEFAULT_EXPANDED_SIZE });
     }
     if (vol !== undefined) set({ volume: vol });
+    if (theme) set({ theme });
   },
 }));

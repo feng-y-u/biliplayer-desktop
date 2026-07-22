@@ -19,7 +19,15 @@ function App() {
   const windowStore = useWindowStore();
   const recent = useRecentStore();
   const [notification, setNotification] = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const loginPromptDismissedRef = useRef(false);
   const [ready, setReady] = useState(false);
+
+  const theme = useWindowStore(s => s.theme);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   //启动时从磁盘恢复数据
   useEffect(() => {
@@ -51,6 +59,16 @@ function App() {
     setTimeout(() => setNotification(null), NOTIFICATION_TIMEOUT_MS);
   }, []);
 
+  const handlePlayErrorNeedLogin = useCallback(async () => {
+    if (loginPromptDismissedRef.current) return;
+    try {
+      const api = window.electronAPI;
+      if (!api) return;
+      const r = await api.loginCheck();
+      if (!r.loggedIn) setShowLoginPrompt(true);
+    } catch { /* ignore */ }
+  }, []);
+
   const { state: playerState, playPause, playTrack, seek, volumeChange, syncVolume } = useAudioPlayer(() => {
     playerCtrl.handleNextButton();
   });
@@ -76,6 +94,7 @@ function App() {
     playTrack,
     playPause,
     showNotification,
+    onPlayErrorNeedLogin: handlePlayErrorNeedLogin,
   });
 
   const favActions = useFavoriteActions({
@@ -123,6 +142,11 @@ function App() {
           storage={storage}
           playerState={playerState}
           playlistState={{ tracks: playlist.tracks, currentIndex: playlist.currentIndex, playMode: playlist.playMode }}
+          showLogin={showLogin}
+          showLoginPrompt={showLoginPrompt}
+          onShowLoginChange={setShowLogin}
+          onLoginPromptDismiss={() => { setShowLoginPrompt(false); loginPromptDismissedRef.current = true; }}
+          onLoginPromptGoLogin={() => { setShowLoginPrompt(false); setShowLogin(true); }}
         />
       )}
     </PlayerContext.Provider>
