@@ -3,6 +3,7 @@ import type { Track, CurrentAudio, PlayMode } from '@/types';
 import { getVideoInfo, getPlaylist, getFavList, getSeriesList, getColleList } from '@/services/api';
 import { getAudioEngine } from '@/services/audioEngine';
 import { parseInput } from '@/utils/bilibili';
+import { mergeUniqueTracks } from '@/utils/track';
 
 interface PlaylistStore {
   tracks: Track[];
@@ -139,27 +140,19 @@ export function usePlayerController({
         } else if (parsed.type === 'favId') {
           const res = await getFavList(parsed.id);
           if (!res.success) throw new Error(res.error);
-          const existing = new Set(playlist.tracks.map(t => `${t.bvid}:${t.cid}`));
-          const newTracks = res.data.filter(t => !existing.has(`${t.bvid}:${t.cid}`));
-          playlist.setTracks([...playlist.tracks, ...newTracks]);
+          playlist.setTracks(mergeUniqueTracks(playlist.tracks, res.data));
         } else if (parsed.type === 'series') {
           const res = await getSeriesList(parsed.mid, parsed.sid);
           if (!res.success) throw new Error(res.error);
-          const existing = new Set(playlist.tracks.map(t => `${t.bvid}:${t.cid}`));
-          const newTracks = res.data.filter(t => !existing.has(`${t.bvid}:${t.cid}`));
-          playlist.setTracks([...playlist.tracks, ...newTracks]);
+          playlist.setTracks(mergeUniqueTracks(playlist.tracks, res.data));
         } else if (parsed.type === 'collection') {
           const res = await getColleList(parsed.mid, parsed.sid);
           if (!res.success) throw new Error(res.error);
-          const existing = new Set(playlist.tracks.map(t => `${t.bvid}:${t.cid}`));
-          const newTracks = res.data.filter(t => !existing.has(`${t.bvid}:${t.cid}`));
-          playlist.setTracks([...playlist.tracks, ...newTracks]);
+          playlist.setTracks(mergeUniqueTracks(playlist.tracks, res.data));
         } else {
           const res = await getPlaylist(parsed.url);
           if (!res.success) throw new Error(res.error);
-          const existing = new Set(playlist.tracks.map(t => t.bvid));
-          const newTracks = res.data.filter(t => !existing.has(t.bvid));
-          playlist.setTracks([...playlist.tracks, ...newTracks]);
+          playlist.setTracks(mergeUniqueTracks(playlist.tracks, res.data));
         }
       } finally {
         setLoading(false);
@@ -184,19 +177,13 @@ export function usePlayerController({
         let nextIndex: number;
         if (playlist.playMode === 'single') {
           nextIndex = startIndex;
-        } else if (playlist.playMode === 'shuffle') {
-          if (total === 1) {
-            nextIndex = 0;
-          } else {
-            do {
-              nextIndex = Math.floor(Math.random() * total);
-            } while (nextIndex === startIndex && total > 1);
-            // 后续 attempt 避开已失败的 startIndex；随机即可
-            if (attempt > 0) {
-              nextIndex = (startIndex + 1 + attempt) % total;
-            }
-          }
+        } else if (playlist.playMode === 'shuffle' && attempt === 0 && total > 1) {
+          // 随机切一首，避开当前曲目
+          do {
+            nextIndex = Math.floor(Math.random() * total);
+          } while (nextIndex === startIndex);
         } else {
+          // 顺序推进；shuffle 失败后的重试也走这里，避免无限随机
           nextIndex = (startIndex + 1 + attempt) % total;
         }
         const track = playlist.tracks[nextIndex];

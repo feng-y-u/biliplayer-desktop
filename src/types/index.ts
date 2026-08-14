@@ -9,8 +9,6 @@ export interface Track {
 
 export type PlayMode = 'loop' | 'single' | 'shuffle';     //三种播放模式（列表，单曲，随机）
 
-export type CollapsedState = 'collapsed' | 'expanded';
-
 export interface WindowPosition {
   left: number;
   top: number;

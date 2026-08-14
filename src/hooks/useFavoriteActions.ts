@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import type { Track, FavoriteFolder } from '@/types';
 import { getVideoInfo, getPlaylist, getFavList, getSeriesList, getColleList } from '@/services/api';
-import { isSameTrack } from '@/utils/track';
+import { isSameTrack, mergeUniqueTracks } from '@/utils/track';
 import { parseInput } from '@/utils/bilibili';
 
 interface FavoritesStore {
@@ -88,14 +88,13 @@ export function useFavoriteActions({
   }, [favorites, showNotification]);
 
   const handleAddAllToPlaylist = useCallback((tracks: Track[]) => {
-    const existing = new Set(playlistTracks.map(t => t.bvid));
-    const newTracks = tracks.filter(t => !existing.has(t.bvid));
-    if (newTracks.length === 0) {
+    const next = mergeUniqueTracks(playlistTracks, tracks);
+    if (next.length === playlistTracks.length) {
       showNotification('所有歌曲已在播放列表中');
       return;
     }
-    setPlaylistTracks([...playlistTracks, ...newTracks]);
-    showNotification(`已添加 ${newTracks.length} 首歌曲到播放列表`);
+    setPlaylistTracks(next);
+    showNotification(`已添加 ${next.length - playlistTracks.length} 首歌曲到播放列表`);
   }, [playlistTracks, setPlaylistTracks, showNotification]);
 
   const handlePlayFromFavorite = useCallback(async (track: Track) => {

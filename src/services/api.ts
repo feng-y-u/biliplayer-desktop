@@ -2,8 +2,8 @@
  * 渲染进程的 B 站 API 调用层。
  *
  * 职责：
- * - 封装所有 IPC 调用，渲染进程不直接 fetch
- * - 音频播放逻辑已迁移至 audioEngine.ts（状态机管理）
+ * - 封装所有 IPC 调用，渲染进程不直接 fetch（请求统一走主进程）
+ * - 音频播放状态机见 audioEngine.ts，URL 缓存见 audioCache.ts
  */
 
 const api = window.electronAPI?.api;

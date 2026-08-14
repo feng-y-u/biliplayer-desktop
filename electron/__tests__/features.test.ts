@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { parsePlaylistUrl } from '../bilibiliApi';
 import { nextMode, MODE_ORDER } from '../../src/components/floating-player/ModeIcon';
-import { isTrackFavorited, isSameTrack } from '../../src/utils/track';
+import { isSameTrack } from '../../src/utils/track';
 import { extractBvid } from '../../src/utils/bilibili';
-import type { Track, FavoriteFolder } from '../../src/types';
+import type { Track } from '../../src/types';
 
 /**
  * 特征测试：验证关键业务逻辑
@@ -71,25 +71,10 @@ describe('播放模式循环', () => {
   });
 });
 
-describe('收藏夹匹配逻辑', () => {
+describe('isSameTrack 匹配逻辑', () => {
   const mkTrack = (bvid: string, cid: number): Track => ({ bvid, cid, title: '', author: '', cover: '' });
-  const mkFav = (tracks: Track[]): FavoriteFolder => ({ id: '1', name: 'test', icon: '🎵', tracks, updatedAt: 0 });
 
-  it('空收藏夹返回 false', () => {
-    expect(isTrackFavorited(mkTrack('BV1', 1), [])).toBe(false);
-  });
-
-  it('找到匹配返回 true', () => {
-    const favs = [mkFav([mkTrack('BV1', 1)])];
-    expect(isTrackFavorited(mkTrack('BV1', 1), favs)).toBe(true);
-  });
-
-  it('bvid 相同但 cid 不同返回 false', () => {
-    const favs = [mkFav([mkTrack('BV1', 1)])];
-    expect(isTrackFavorited(mkTrack('BV1', 999), favs)).toBe(false);
-  });
-
-  it('isSameTrack 比较 bvid + cid', () => {
+  it('比较 bvid + cid', () => {
     expect(isSameTrack(mkTrack('BV1', 1), mkTrack('BV1', 1))).toBe(true);
     expect(isSameTrack(mkTrack('BV1', 1), mkTrack('BV1', 2))).toBe(false);
     expect(isSameTrack(mkTrack('BV1', 1), mkTrack('BV2', 1))).toBe(false);

@@ -5,6 +5,12 @@ import { getVideoInfo, parsePlaylistUrl, getPlaylistVideos, getFavListVideos, ge
 
 const DEFAULT_WINDOW_SIZE = { width: 320, height: 480 };
 const QR_FETCH_TIMEOUT_MS = 15_000;
+const QR_CODE_MAX_AGE_MS = 180_000; // B站登录二维码有效期约 3 分钟
+const BILIBILI_COOKIE_URLS = [
+  'https://bilibili.com',
+  'https://www.bilibili.com',
+  'https://passport.bilibili.com',
+];
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
 async function passportFetch(url: string): Promise<Response> {
@@ -24,6 +30,7 @@ type QrCodeStatus = 'LOADING' | 'PENDING' | 'SCANNED' | 'CONFIRMED' | 'EXPIRED' 
 
 interface LoginState {
   oauthKey: string;
+  createdAt: number;
 }
 
 const loginStates = new Map<number, LoginState>();
@@ -35,6 +42,11 @@ function cancelLogin(id: number) {
 async function pollQrCode(id: number): Promise<{ status: QrCodeStatus; message: string; qrUrl?: string }> {
   const st = loginStates.get(id);
   if (!st) return { status: 'ERROR', message: '登录会话不存在' };
+  // 会话超过二维码有效期 → 自动清理，避免内存泄漏与无效轮询
+  if (Date.now() - st.createdAt > QR_CODE_MAX_AGE_MS) {
+    cancelLogin(id);
+    return { status: 'EXPIRED', message: '二维码已过期，请刷新' };
+  }
 
   try {
     const res = await passportFetch(
@@ -69,6 +81,11 @@ async function pollQrCode(id: number): Promise<{ status: QrCodeStatus; message: 
 }
 
 export function registerIpcHandlers() {
+  // 窗口销毁时清理该窗口的登录会话，避免 Map 泄漏
+  appCore.mainWindow?.webContents.once('destroyed', () => {
+    loginStates.clear();
+  });
+
   /* ---------- API ---------- */
   ipcMain.handle('api', async (_event, message: { type: string; [key: string]: any }) => {
     try {
@@ -113,9 +130,6 @@ export function registerIpcHandlers() {
     const [width, height] = appCore.mainWindow.getSize();
     return { x, y, width, height };
   });
-  ipcMain.handle('window:setMinimumSize', (_event, w: number, h: number) => {
-    if (appCore.mainWindow) appCore.mainWindow.setMinimumSize(Math.round(w), Math.round(h));
-  });
 
   /* ---------- 登录 ---------- */
   ipcMain.handle('login:qrcode:start', async (event) => {
@@ -130,7 +144,7 @@ export function registerIpcHandlers() {
       const oauthKey: string = data.data.qrcode_key;
       const qrUrl: string = data.data.url;
 
-      const st: LoginState = { oauthKey };
+      const st: LoginState = { oauthKey, createdAt: Date.now() };
       loginStates.set(id, st);
 
       return { status: 'PENDING' as const, message: '请使用 B站 App 扫描二维码', qrUrl };
@@ -144,10 +158,6 @@ export function registerIpcHandlers() {
     const st = loginStates.get(id);
     if (!st) return { status: 'EXPIRED' as const, message: '登录会话已过期' };
     return pollQrCode(id);
-  });
-
-  ipcMain.handle('login:qrcode:cancel', async (event) => {
-    cancelLogin(event.sender.id);
   });
 
   ipcMain.handle('login:check', async () => {
@@ -164,7 +174,10 @@ export function registerIpcHandlers() {
     try {
       const cookies = await session.defaultSession.cookies.get({ domain: '.bilibili.com' });
       for (const c of cookies) {
-        await session.defaultSession.cookies.remove('https://bilibili.com', c.name);
+        // cookie 可能挂在任一子域下，逐个候选 URL 删除，确保登出彻底
+        for (const url of BILIBILI_COOKIE_URLS) {
+          await session.defaultSession.cookies.remove(url, c.name);
+        }
       }
     } catch { /* ignore */ }
   });

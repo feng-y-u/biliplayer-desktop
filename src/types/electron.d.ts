@@ -7,12 +7,10 @@ export interface ElectronAPI {
   windowMove: (x: number, y: number) => Promise<void>;
   windowResize: (w: number, h: number) => Promise<void>;
   windowGetPosition: () => Promise<{ x: number; y: number; width: number; height: number }>;
-  windowSetMinimumSize: (w: number, h: number) => Promise<void>;
 
   /** 二维码登录 */
   loginQrcodeStart: () => Promise<QrCodeState>;
   loginQrcodePoll: () => Promise<QrCodeState>;
-  loginQrcodeCancel: () => Promise<void>;
   loginCheck: () => Promise<{ loggedIn: boolean }>;
   loginLogout: () => Promise<void>;
 }

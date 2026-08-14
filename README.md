@@ -77,29 +77,40 @@ electron/              # 主进程
 
 src/                   # 渲染进程
 ├── main.tsx           # React 入口
-├── App.tsx            # 根组件（组合 stores + hooks）
-├── services/api.ts    # IPC 封装 + 全局 HTMLAudioElement 单例
+├── App.tsx            # 根组件（组合 stores + hooks + PlayerContext）
+├── services/          # IPC 封装 + 音频引擎
+│   ├── api.ts         # 渲染层 IPC 调用封装（不直接 fetch）
+│   ├── audioEngine.ts # 音频播放状态机（全局 HTMLAudioElement 单例）
+│   └── audioCache.ts  # 音频 URL 缓存（10 分钟过期管理）
 ├── stores/            # Zustand（播放列表 / 收藏夹 / 最近 / 窗口）
 │   ├── playlistStore.ts
 │   ├── favoritesStore.ts
 │   ├── recentStore.ts
 │   └── windowStore.ts
+├── contexts/          # PlayerContext（向组件树提供播放/列表/收藏动作）
+│   ├── PlayerContext.tsx
+│   └── usePlayerContextValue.ts
 ├── hooks/             # 播放 / 拖拽 / 缩放 / 动画
 │   ├── useAudioPlayer.ts
 │   ├── usePlayerController.ts
 │   ├── useFavoriteActions.ts
 │   ├── useDrag.ts
+│   ├── useFloatingPlayerDrag.ts
 │   ├── useResize.ts
 │   ├── useDragReorder.ts
 │   └── useLerpAnimation.ts
 ├── components/        # UI
 │   └── floating-player/
-│       ├── FloatingPlayer.tsx   # 折叠缩略图 + 拖拽
+│       ├── FloatingPlayer.tsx   # 折叠缩略图 + 拖拽 + 展开动画
+│       ├── PlayerThumb.tsx      # 64×64 折叠缩略图
 │       ├── ExpandedPanel.tsx    # 展开面板（三标签）
 │       ├── Playlist.tsx
 │       ├── FavoritesTab.tsx
 │       ├── RecentTab.tsx
-│       └── ModeIcon.tsx
+│       ├── LoginModal.tsx       # 二维码登录弹窗
+│       ├── LoginPrompt.tsx      # 登录提示
+│       ├── ModeIcon.tsx
+│       └── Icons.tsx
 ├── styles/
 │   ├── tokens.css     # 设计令牌（CSS 自定义属性）
 │   └── global.css     # 全局重置

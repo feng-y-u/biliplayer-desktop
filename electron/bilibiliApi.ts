@@ -9,6 +9,12 @@ const RATE_LIMIT_DELAY_MS = 1200;
 
 import { net } from 'electron';
 
+/** 仅在开发模式（VITE_DEV_SERVER_URL）输出调试日志，生产构建保持安静 */
+const isDev = !!process.env.VITE_DEV_SERVER_URL;
+function debugLog(...args: unknown[]) {
+  if (isDev) console.log(...args);
+}
+
 /** 串行队列：后续请求必须等前一个请求发出至少 RATE_LIMIT_DELAY_MS */
 let _rateLimitGate: Promise<void> = Promise.resolve();
 
@@ -28,12 +34,12 @@ async function biliFetch(url: string, retries = FETCH_RETRIES): Promise<Response
     }, FETCH_TIMEOUT_MS);
     const t0 = Date.now();
     try {
-      console.log(`[bilibiliApi] 请求开始 attempt=${attempt + 1}: ${url}`);
+      debugLog(`[bilibiliApi] 请求开始 attempt=${attempt + 1}: ${url}`);
       const res = await net.fetch(url, {
         signal: controller.signal,
         headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       });
-      console.log(`[bilibiliApi] 请求成功 attempt=${attempt + 1} status=${res.status} 耗时=${Date.now() - t0}ms`);
+      debugLog(`[bilibiliApi] 请求成功 attempt=${attempt + 1} status=${res.status} 耗时=${Date.now() - t0}ms`);
       if (!res.ok) {
         throw new Error(`HTTP ${res.status} ${res.statusText}`);
       }
