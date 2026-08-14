@@ -5,6 +5,14 @@ import { getAudioEngine } from '@/services/audioEngine';
 import { parseInput } from '@/utils/bilibili';
 import { mergeUniqueTracks } from '@/utils/track';
 
+/** 播放前确保 cid 可用：收藏夹接口不返回 cid（曲目 cid=0），按需调 view 接口补齐。 */
+async function ensureTrackCid(track: Track): Promise<Track> {
+  if (track.cid) return track;
+  const res = await getVideoInfo(track.bvid);
+  if (!res.success) throw new Error(res.error);
+  return { ...track, cid: res.data.cid, duration: res.data.duration || track.duration };
+}
+
 interface PlaylistStore {
   tracks: Track[];
   currentIndex: number;
@@ -46,6 +54,21 @@ export function usePlayerController({
   const [loading, setLoading] = useState(false);
   const nextInFlightRef = useRef(false);
 
+  /** 播放成功后后台预取下一首的 cid，切歌时无需再等 view 接口。 */
+  const prefetchNextCid = useCallback((currentIndex: number) => {
+    const idx = currentIndex + 1;
+    const track = playlist.tracks[idx];
+    if (!track || track.cid) return;
+    void getVideoInfo(track.bvid).then((res) => {
+      if (!res.success) return;
+      const list = playlist.tracks;
+      if (idx >= list.length || list[idx]?.bvid !== track.bvid || list[idx]!.cid) return;
+      const next = [...list];
+      next[idx] = { ...next[idx]!, cid: res.data.cid, duration: res.data.duration || next[idx]!.duration };
+      playlist.setTracks(next);
+    });
+  }, [playlist.tracks, playlist]);
+
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {
       playPause();
@@ -60,17 +83,36 @@ export function usePlayerController({
         if (!ok) void playTrack(track);
       });
     } else {
-      void playTrack(track);
+      void (async () => {
+        try {
+          const playable = await ensureTrackCid(track);
+          if (playable.cid !== track.cid && playlist.tracks[playlist.currentIndex]?.bvid === track.bvid) {
+            const next = [...playlist.tracks];
+            next[playlist.currentIndex] = playable;
+            playlist.setTracks(next);
+          }
+          await playTrack(playable);
+        } catch {
+          showNotification('获取视频信息失败，请稍后重试');
+        }
+      })();
     }
-  }, [currentAudio, playlist.tracks, playlist.currentIndex, isPlaying, playTrack, playPause]);
+  }, [currentAudio, playlist.tracks, playlist.currentIndex, isPlaying, playTrack, playPause, showNotification]);
 
   const addTrackToPlaylistAndPlay = useCallback(async (track: Track) => {
+    let playable: Track;
+    try {
+      playable = await ensureTrackCid(track);
+    } catch {
+      showNotification('获取视频信息失败，请稍后重试');
+      return;
+    }
     const newIndex = playlist.tracks.length;
-    playlist.setTracks([...playlist.tracks, track]);
+    playlist.setTracks([...playlist.tracks, playable]);
     playlist.setCurrentIndex(newIndex);
-    await playTrack(track);
-    recent.addRecentTrack(track);
-  }, [playlist, playTrack, recent]);
+    await playTrack(playable);
+    recent.addRecentTrack(playable);
+  }, [playlist, playTrack, recent, showNotification]);
 
   const handlePlayTrack = useCallback(async (index: number) => {
     if (index < 0 || index >= playlist.tracks.length) return;
@@ -80,9 +122,24 @@ export function usePlayerController({
     try {
       const track = playlist.tracks[index]!;
       playlist.setCurrentIndex(index);
-      const ok = await playTrack(track);
+      let playable: Track;
+      try {
+        playable = await ensureTrackCid(track);
+      } catch {
+        showNotification('获取视频信息失败，请稍后重试');
+        onPlayErrorNeedLogin?.();
+        return;
+      }
+      // 补齐 cid 后更新列表缓存，避免下次重复查询
+      if (playable.cid !== track.cid) {
+        const next = [...playlist.tracks];
+        next[index] = playable;
+        playlist.setTracks(next);
+      }
+      const ok = await playTrack(playable);
       if (ok) {
-        recent.addRecentTrack(track);
+        recent.addRecentTrack(playable);
+        prefetchNextCid(index);
       } else {
         showNotification('播放失败，请稍后重试');
         onPlayErrorNeedLogin?.();
@@ -90,7 +147,7 @@ export function usePlayerController({
     } finally {
       nextInFlightRef.current = false;
     }
-  }, [playlist, playTrack, recent, showNotification, onPlayErrorNeedLogin]);
+  }, [playlist, playTrack, recent, showNotification, onPlayErrorNeedLogin, prefetchNextCid]);
 
   const handleDeleteTrack = useCallback((index: number) => {
     const track = playlist.tracks[index];
@@ -112,9 +169,15 @@ export function usePlayerController({
     if (wasPlaying && isLastTrack) {
       engine.pause();
     } else if (nextTrack) {
-      playTrack(nextTrack);
+      void (async () => {
+        try {
+          await playTrack(await ensureTrackCid(nextTrack));
+        } catch {
+          showNotification('获取视频信息失败，请稍后重试');
+        }
+      })();
     }
-  }, [playlist.tracks, playlist.currentIndex, isPlaying, playlist.deleteTrack, playTrack]);
+  }, [playlist.tracks, playlist.currentIndex, isPlaying, playlist.deleteTrack, playTrack, showNotification]);
 
   const handleClearPlaylist = useCallback(() => {
     playlist.setTracks([]);
@@ -190,7 +253,18 @@ export function usePlayerController({
         if (!track) return;
         // 先更新列表高亮，避免加载期间 UI 仍停在上一首
         playlist.setCurrentIndex(nextIndex);
-        const ok = await playTrack(track);
+        let playable: Track;
+        try {
+          playable = await ensureTrackCid(track);
+        } catch {
+          continue; // 该首信息获取失败，尝试下一首
+        }
+        if (playable.cid !== track.cid) {
+          const next = [...playlist.tracks];
+          next[nextIndex] = playable;
+          playlist.setTracks(next);
+        }
+        const ok = await playTrack(playable);
         if (ok) return;
       }
       showNotification('所有曲目播放失败');
@@ -205,9 +279,19 @@ export function usePlayerController({
     const track = playlist.tracks[prevIndex];
     if (!track) return;
     playlist.setCurrentIndex(prevIndex);
-    const ok = await playTrack(track);
-    if (!ok) {
-      showNotification('播放失败，请稍后重试');
+    try {
+      const playable = await ensureTrackCid(track);
+      if (playable.cid !== track.cid) {
+        const next = [...playlist.tracks];
+        next[prevIndex] = playable;
+        playlist.setTracks(next);
+      }
+      const ok = await playTrack(playable);
+      if (!ok) {
+        showNotification('播放失败，请稍后重试');
+      }
+    } catch {
+      showNotification('获取视频信息失败，请稍后重试');
     }
   }, [playlist.currentIndex, playlist.tracks, playTrack, showNotification]);
 

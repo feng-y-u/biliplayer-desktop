@@ -42,10 +42,12 @@ CI（`.github/workflows/ci.yml`）：`npm ci` → `tsc --noEmit` → `npm run bu
 | type | 参数 | 返回 |
 |------|------|------|
 | `GET_VIDEO_INFO` | `{ bvid }` | title/author/cover/cid/… |
-| `GET_PLAYLIST` | `{ url }` | 收藏夹曲目（分页聚合，视频信息并发 5） |
-| `GET_AUDIO_URL` | `{ bvid, cid }` | `{ url, expiresAt }`（约 10 分钟） |
+| `GET_PLAYLIST` | `{ url }` | 收藏夹曲目（分页聚合；cid 按需补齐，见「B 站 API 细节」） |
+| `GET_FAV_LIST` | `{ mediaId }` | 收藏夹 ID 直拉（同 GET_PLAYLIST 底层接口） |
+| `GET_SERIES_LIST` / `GET_COLLE_LIST` | `{ mid, sid }` | 视频列表 / 合集（接口自带 cid） |
+| `GET_AUDIO_URL` | `{ bvid, cid }` | `{ url, backupUrls, expiresAt }`（约 10 分钟） |
 
-另：`store:get`/`store:set`；`window:move`（send）、`window:resize`/`getPosition`/`setMinimumSize`（invoke）。
+另：`store:get`/`store:set`；`window:move`（send）、`window:resize`/`getPosition`（invoke）；`login:qrcode:start`/`login:qrcode:poll`/`login:check`/`login:logout`。
 
 ## 状态与持久化
 
@@ -63,17 +65,17 @@ schema 只在 `appCore.ts` 泛型里定义，与渲染不同步 → 键/形状�
 
 ## 音频
 
-- 全局唯一 `HTMLAudioElement`：`src/services/api.ts`；URL 缓存：`src/services/audioCache.ts`。
-- 过期优先读 CDN `deadline` 参数，否则约 10 分钟。双重刷新：播放中每 60s；`resume`/中途 error 可 `force` 刷；命中缓存需距过期 >60s。
-- `playAudioLocal` 设 `switching`：全局 `error` **不得**再触发切歌（否则会与失败返回双重 `next`，并发抢 `audioEl` → 整表失败几分钟）。
-- 主 URL 失败试 `backupUrls`，再 `invalidate` 后重拉一次；`canplay` 15s 超时；缓冲等待有上限（短曲/卡顿不会死等）。
-- `handleNextButton` 防重入。CDN Referer/UA 注入见 `windowManager`（`*.hdslb.com` / `*.bilivideo.com` / `*.bilibili.com` / `*.mountaintoys.cn`）。
+- 全局唯一 `HTMLAudioElement` + 播放状态机：`src/services/audioEngine.ts`（`getAudioEngine()` 单例）；URL 缓存：`src/services/audioCache.ts`。
+- 过期优先读 CDN `deadline` 参数，否则约 10 分钟。双重刷新：播放中每 60s `backgroundRefresh`；`resume`/中途 error 可 `force` 刷；命中缓存需距过期 >60s。
+- 主 URL 失败试 `backupUrls`，再 `invalidate` 后重拉一次；`canplay` 8s 超时；缓冲等待有上限（短曲/卡顿不会死等）。
+- `handleNextButton` 防重入（`nextInFlightRef`）。CDN Referer/UA 注入见 `windowManager`（`*.hdslb.com` / `*.bilivideo.com` / `*.bilibili.com` / `*.mountaintoys.cn`）。
 
 ## B 站 API 细节
 
 - 收藏夹列表参数是 **`media_id`**（URL 里的 `fid`/`seasonId` 作 media_id；不是 fid 字段名直传）。
 - `parsePlaylistUrl` 两种：`medialist/play/dlista/{seasonId}/{mid}`、`space.bilibili.com/{mid}/favlist?fid={seasonId}`。
-- `biliFetch`：30s 超时、最多 2 次重试；单条视频信息失败 → `cid: 0` 兜底。
+- `biliFetch`：30s 超时、最多 2 次重试、全局限速串行门（每请求 ≥1.2s，防封）。
+- **cid 懒加载**：收藏夹接口不返回 cid → 列表曲目 `cid=0` 立即返回；播放时由渲染层 `ensureTrackCid` 按需调 `GET_VIDEO_INFO` 补齐，播放成功后预取下一首 cid。系列/合集接口自带 cid，无需补齐。
 - 音频：`playurl` + `fnval=16` 取 DASH `dash.audio[0]`。
 
 ## 约定

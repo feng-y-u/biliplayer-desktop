@@ -1,13 +1,12 @@
 // electron/bilibiliApi.ts
+import { net } from 'electron';
+
 const PLAYLIST_PAGE_SIZE = 20;
 const AUDIO_URL_EXPIRY_MS = 10 * 60 * 1000;
-const VIDEO_INFO_CONCURRENCY = 2;
 const FETCH_TIMEOUT_MS = 30_000;
 const FETCH_RETRIES = 1;
 const FETCH_RETRY_DELAY_MS = 1000;
 const RATE_LIMIT_DELAY_MS = 1200;
-
-import { net } from 'electron';
 
 /** 仅在开发模式（VITE_DEV_SERVER_URL）输出调试日志，生产构建保持安静 */
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
@@ -72,42 +71,20 @@ export function parsePlaylistUrl(url: string) {
   return null;
 }
 
-async function fetchVideoInfoList(items: any[]): Promise<any[]> {
-  const results: any[] = [];
-  let cidZeroCount = 0;
-  for (let i = 0; i < items.length; i += VIDEO_INFO_CONCURRENCY) {
-    const batch = items.slice(i, i + VIDEO_INFO_CONCURRENCY);
-    const batchResults = await Promise.all(batch.map(async (item: any) => {
-      try {
-        const info = await getVideoInfo(item.bvid);
-        return {
-          bvid: item.bvid,
-          cid: info.cid,
-          title: item.title,
-          author: item.upper?.name || '',
-          cover: item.cover,
-          duration: item.duration,
-        };
-      } catch (e) {
-        cidZeroCount++;
-        console.error(`[bilibiliApi] getVideoInfo 失败, bvid=${item.bvid}:`, (e as Error).message);
-        return {
-          bvid: item.bvid,
-          cid: 0,
-          title: item.title,
-          author: item.upper?.name || '',
-          cover: item.cover,
-          duration: item.duration,
-        };
-      }
-    }));
-    results.push(...batchResults);
-    if (i + VIDEO_INFO_CONCURRENCY < items.length) {
-      await new Promise(r => setTimeout(r, 500));
-    }
-  }
-  if (cidZeroCount > 0) console.warn(`[bilibiliApi] ${cidZeroCount} 条曲目的视频信息获取失败 (cid=0)，这些曲目将无法播放`);
-  return results;
+/**
+ * 列表接口的曲目转 Track。
+ * 注意：收藏夹（fav/resource/list）不返回 cid → cid=0，播放时由渲染层按需调 getVideoInfo 补齐；
+ * 系列/合集接口自带 cid，直接使用。
+ */
+function toTrack(item: any) {
+  return {
+    bvid: item.bvid,
+    cid: item.cid ?? 0,
+    title: item.title,
+    author: item.upper?.name || item.owner?.name || '',
+    cover: item.cover,
+    duration: item.duration,
+  };
 }
 
 export async function getPlaylistVideos(_mid: string, seasonId: string) {
@@ -123,7 +100,7 @@ export async function getPlaylistVideos(_mid: string, seasonId: string) {
     if (!data.data?.has_more || medias.length < PLAYLIST_PAGE_SIZE) break;
     pn++;
   }
-  return fetchVideoInfoList(all);
+  return all.map(toTrack);
 }
 
 export async function getFavListVideos(mediaId: string) {
@@ -139,7 +116,7 @@ export async function getFavListVideos(mediaId: string) {
     if (!data.data?.has_more || medias.length < PLAYLIST_PAGE_SIZE) break;
     pn++;
   }
-  return fetchVideoInfoList(all);
+  return all.map(toTrack);
 }
 
 export async function getSeriesVideos(mid: string, sid: string) {
@@ -147,7 +124,7 @@ export async function getSeriesVideos(mid: string, sid: string) {
   const data = await res.json();
   if (data.code !== 0) throw new Error(data.message);
   const archives = data.data?.archives || [];
-  return fetchVideoInfoList(archives.map((a: any) => ({ bvid: a.bvid, title: a.title, cover: a.cover, upper: a.owner })));
+  return archives.map(toTrack);
 }
 
 export async function getColleVideos(mid: string, sid: string) {
@@ -163,7 +140,7 @@ export async function getColleVideos(mid: string, sid: string) {
     if (!data.data?.page || archives.length < 30) break;
     pn++;
   }
-  return fetchVideoInfoList(all);
+  return all.map(toTrack);
 }
 
 /** 从 CDN URL 的 deadline 查询参数解析过期时间；没有则回退固定窗口。 */
